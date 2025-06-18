@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
 import { UserProvider } from '@/lib/providers/user-provider'
-import { PrismaClient } from '@prisma/client'
 import { auth } from '@/auth'
 import { prisma } from "@/lib/prisma"
-
-const prismaClient = new PrismaClient()
 
 export async function GET(request: Request) {
   try {
@@ -74,7 +71,7 @@ export async function POST(request: Request) {
     const { name, role, store_id } = data
 
     // 既存のユーザーを検索
-    const existingUser = await prismaClient.users.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { email: session.user.email },
     })
 
@@ -86,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     // 新規ユーザーを作成
-    const user = await prismaClient.users.create({
+    const user = await prisma.users.create({
       data: {
         email: session.user.email,
         name: name || session.user.name || null,

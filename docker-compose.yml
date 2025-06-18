@@ -1,0 +1,46 @@
+services:
+  app:
+    tty: true
+    networks:
+      - qompass-network
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+      - "5555:5555" # デバッグ用ポート
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - ./.env
+    depends_on:
+      db:
+        condition: service_started
+
+  db:
+    image: postgres:15
+    hostname: db
+    env_file:
+      - ./.env
+    ports:
+      - "5432:5432"
+    networks:
+      - qompass-network
+    environment:
+      - TZ=Asia/Tokyo
+      - POSTGRES_DB=qompass
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+
+networks:
+  qompass-network:
+    driver: bridge
+volumes:
+  db_data:
+
+
+ 
