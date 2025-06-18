@@ -65,6 +65,26 @@ model orders {
   users        users?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+model SalesRecord {
+  id                 Int       @id @default(autoincrement())
+  date               DateTime  @db.Date // CSVの「日付」
+  store_id           Int       // CSVの「店舗」に対応するID
+  product_id         Int       // CSVの「商品名」に対応するID
+  quantity           Int       // CSVの「数量」
+  unit_price         Decimal   @db.Decimal(10, 2) // CSVの「単価」
+  sales_amount       Decimal   @db.Decimal(10, 2) // CSVの「売上」
+  customer_attribute String?   // CSVの「顧客属性」
+  created_at         DateTime  @default(now()) @db.Timestamp(6)
+  updated_at         DateTime  @updatedAt @db.Timestamp(6)
+
+  // リレーション
+  store   stores   @relation(fields: [store_id], references: [id])
+  product products @relation(fields: [product_id], references: [id])
+
+  // 必要に応じて、日付、店舗、商品名でのユニーク制約などを追加することも検討できますが、
+  // 現時点では各レコードが独立した売上実績として追加される想定です。
+}
+
 model products {
   id           Int           @id @default(autoincrement())
   store_id     Int
@@ -78,6 +98,7 @@ model products {
   created_at   DateTime?     @default(now()) @db.Timestamp(6)
   updated_at   DateTime?     @default(now()) @db.Timestamp(6)
   order_items  order_items[]
+  sales_records SalesRecord[] // ★追加
   stores       stores        @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
@@ -93,6 +114,7 @@ model stores {
   orders     orders[]
   products   products[]
   users      users[]
+  sales_records SalesRecord[] // ★追加
 }
 
 model users {
