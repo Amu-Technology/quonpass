@@ -11,9 +11,14 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const storeId = formData.get('storeId') as string | null; // 店舗IDを取得
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded.' }, { status: 400 });
+    }
+
+    if (!storeId) {
+      return NextResponse.json({ error: '店舗IDが必要です。' }, { status: 400 });
     }
 
     const fileContent = await file.text();
@@ -22,6 +27,15 @@ export async function POST(request: Request) {
       skip_empty_lines: true,
     });
 
+    // 店舗の存在確認
+    const store = await prisma.stores.findUnique({
+      where: { id: parseInt(storeId) },
+    });
+
+    if (!store) {
+      return NextResponse.json({ error: '指定された店舗が見つかりません。' }, { status: 400 });
+    }
+
     let importedCount = 0;
     let errorCount = 0;
     let errors: { row: any, message: string }[] = [];
@@ -29,77 +43,80 @@ export async function POST(request: Request) {
     for (const record of records) {
       try {
         const row: {
-          '日付': string;
-          '店舗': string;
+          '営業日': string;
+          '商品コード': string;
           '商品名': string;
-          '数量': string;
-          '単価': string;
-          '売上': string;
-          '顧客属性': string;
+          'カテゴリ1コード': string;
+          'カテゴリ1': string;
+          '平均単価': string;
+          '売上数量': string;
+          '売上金額': string;
         } = record;
 
-        // 1. 店舗IDの取得または作成
-        let store = await prisma.stores.findFirst({
-          where: { name: row['店舗'] },
-        });
-
-        if (!store) {
-          console.warn(`店舗 '${row['店舗']}' が見つかりません。新しい店舗を作成します。`);
-          store = await prisma.stores.create({
-            data: {
-              name: row['店舗'],
-              address: '不明',
-              phone: '不明',
-              email: `contact@${row['店舗'].replace(/\s/g, '').toLowerCase()}.com`,
-              status: status.active,
-            },
-          });
+        // 日付の処理（「2025/06/17(火)」形式をISO形式に変換）
+        let dateStr = row['営業日'];
+        if (dateStr && dateStr.includes('(')) {
+          dateStr = dateStr.split('(')[0]; // 「(火)」部分を除去
+        }
+        
+        // 日付文字列をISO形式に変換（YYYY/MM/DD → YYYY-MM-DD）
+        if (dateStr && dateStr.includes('/')) {
+          dateStr = dateStr.replace(/\//g, '-');
+        }
+        
+        const recordDate = parseISO(dateStr);
+        if (!isValid(recordDate)) {
+          throw new Error(`無効な日付形式です: ${row['営業日']} (処理後: ${dateStr})`);
         }
 
-        // 2. 商品IDの取得または作成
+        // 数値の処理（カンマと円マークを除去）
+        const quantity = parseInt(row['売上数量'].replace(/,/g, ''), 10);
+        const unitPriceStr = row['平均単価'].replace(/[¥,]/g, '');
+        const unitPrice = parseFloat(unitPriceStr);
+        const salesAmountStr = row['売上金額'].replace(/[¥,]/g, '');
+        const salesAmount = parseFloat(salesAmountStr);
+
+        if (isNaN(quantity) || isNaN(unitPrice) || isNaN(salesAmount)) {
+          throw new Error(`無効な数値形式です: 数量 '${row['売上数量']}', 単価 '${row['平均単価']}', 売上 '${row['売上金額']}'`);
+        }
+
+        // 商品の取得または作成
         let product = await prisma.products.findFirst({
           where: {
             name: row['商品名'],
-            store_id: store.id, // 店舗に紐づく商品を検索（必要であれば）
+            store_id: store.id,
           },
         });
 
         if (!product) {
-          console.warn(`商品 '${row['商品名']}' (店舗: ${row['店舗']}) が見つかりません。新しい商品を作成します。`);
+          console.log(`商品 '${row['商品名']}' を作成します。`);
           product = await prisma.products.create({
             data: {
               store_id: store.id,
               image_url: 'no-image.jpg',
               name: row['商品名'],
-              description: `CSVインポートされた商品: ${row['商品名']}`,
+              description: `CSVインポート: ${row['カテゴリ1'] || '未分類'}`,
               status: status.active,
-              price: parseFloat(row['単価']) || 0, // 仮の価格
+              price: unitPrice,
               stock: 9999,
               available_at: new Date(),
             },
           });
         }
 
-        const recordDate = parseISO(row['日付']); // date-fns でパース
-        const quantity = parseInt(row['数量'], 10);
-        const unitPrice = parseFloat(row['単価']);
-        const salesAmount = parseFloat(row['売上']);
-
-        if (!isValid(recordDate) || isNaN(quantity) || isNaN(unitPrice) || isNaN(salesAmount)) {
-            throw new Error(`無効なデータ形式です: 日付 '${row['日付']}', 数量 '${row['数量']}', 単価 '${row['単価']}', 売上 '${row['売上']}'`);
-        }
-
-        await prisma.SalesRecord.create({
+        // 売上記録の作成
+        await prisma.salesRecord.create({
           data: {
             date: recordDate,
-            store_id: store!.id,
-            product_id: product!.id,
+            store_id: store.id,
+            product_id: product.id,
             quantity: quantity,
             unit_price: unitPrice,
             sales_amount: salesAmount,
-            customer_attribute: row['顧客属性'],
+            customer_attribute: null, // CSVに顧客属性がない場合はnull
           },
         });
+        
         importedCount++;
 
       } catch (innerError: any) {

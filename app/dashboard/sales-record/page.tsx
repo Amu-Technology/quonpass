@@ -15,8 +15,8 @@ interface SalesRecord {
   id: number;
   date: string; // ISO 8601形式の文字列
   quantity: number;
-  unit_price: number;
-  sales_amount: number;
+  unit_price: number | string; // Decimal型は文字列として返される可能性がある
+  sales_amount: number | string; // Decimal型は文字列として返される可能性がある
   customer_attribute?: string;
   store: {
     name: string;
@@ -38,7 +38,7 @@ export default function SalesRecordPage() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [stores, setStores] = useState<Store[]>([]);
-  const [selectedStoreId, setSelectedStoreId] = useState<string>(''); // 文字列で保持
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('all'); // デフォルト値を'all'に変更
 
   // 店舗リストの取得
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function SalesRecordPage() {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
-      if (selectedStoreId) params.append('storeId', selectedStoreId);
+      if (selectedStoreId && selectedStoreId !== 'all') params.append('storeId', selectedStoreId);
 
       const response = await fetch(`/api/sales-records?${params.toString()}`);
       if (!response.ok) {
@@ -98,9 +98,15 @@ export default function SalesRecordPage() {
       return;
     }
 
+    if (selectedStoreId === 'all') {
+      toast.error('店舗を選択してください。');
+      return;
+    }
+
     setLoading(true);
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('storeId', selectedStoreId);
 
     try {
       const response = await fetch('/api/upload-sales-csv', {
@@ -140,13 +146,21 @@ export default function SalesRecordPage() {
       {/* CSVアップロードセクション */}
       <div className="mb-8 p-6 border rounded-lg shadow-sm bg-white">
         <h2 className="text-2xl font-semibold mb-4">CSVファイルアップロード</h2>
+        <div className="mb-4">
+          <p className="text-sm text-gray-600 mb-2">
+            CSVファイルをアップロードする前に、下記のフィルタリングセクションで店舗を選択してください。
+          </p>
+        </div>
         <div className="flex items-center space-x-4">
           <Input type="file" accept=".csv" onChange={handleFileChange} className="max-w-xs" />
-          <Button onClick={handleUpload} disabled={loading || !file}>
+          <Button onClick={handleUpload} disabled={loading || !file || selectedStoreId === 'all'}>
             {loading ? 'アップロード中...' : 'アップロードしてインポート'}
           </Button>
         </div>
         {file && <p className="mt-2 text-sm text-gray-600">選択中のファイル: {file.name}</p>}
+        {selectedStoreId === 'all' && (
+          <p className="mt-2 text-sm text-red-600">※ CSVアップロードには店舗の選択が必要です</p>
+        )}
       </div>
 
       {/* フィルタリングセクション */}
@@ -168,7 +182,7 @@ export default function SalesRecordPage() {
                 <SelectValue placeholder="店舗を選択" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">全ての店舗</SelectItem>
+                <SelectItem value="all">全ての店舗</SelectItem>
                 {stores.map((store) => (
                   <SelectItem key={store.id} value={String(store.id)}>
                     {store.name}
@@ -210,8 +224,8 @@ export default function SalesRecordPage() {
                       <TableCell>{record.store.name}</TableCell>
                       <TableCell>{record.product.name}</TableCell>
                       <TableCell className="text-right">{record.quantity}</TableCell>
-                      <TableCell className="text-right">¥{record.unit_price.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">¥{record.sales_amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">¥{Number(record.unit_price).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">¥{Number(record.sales_amount).toFixed(2)}</TableCell>
                       <TableCell>{record.customer_attribute || '-'}</TableCell>
                     </TableRow>
                   ))
