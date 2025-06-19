@@ -25,5 +25,5 @@ COPY . .
 # Prisma Clientを生成
 RUN npx prisma generate
 
-# 開発サーバーを起動
+# 開発サーバーを起動（ホットリロード有効）
 CMD ["npm", "run", "dev"]

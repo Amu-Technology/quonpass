@@ -4,12 +4,16 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import * as React from "react";
 import {
-  IconChartBar,
+  IconCookie,
   IconCompass,
   IconDashboard,
-  IconFolder,
   IconListDetails,
   IconUsers,
+  IconBuilding,
+  IconChartHistogram,
+  IconTarget,
+  IconCashRegister,
+  IconTruckDelivery,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -34,17 +38,37 @@ const navMain = [
   {
     title: "売上目標",
     url: "/sales-target",
+    icon: IconTarget,
+  },
+  {
+    title: "売上分析",
+    url: "/dashboard/analytics",
+    icon: IconChartHistogram,
+  },
+  {
+    title: "商品別実績",
+    url: "/dashboard/products-sales",
     icon: IconListDetails,
+  },
+  {
+    title: "レジ記録一覧",
+    url: "/dashboard/register-close",
+    icon: IconCashRegister,
   },
   {
     title: "発注管理",
     url: "/order",
-    icon: IconChartBar,
+    icon: IconTruckDelivery,
   },
   {
-    title: "設定",
-    url: "/settings",
-    icon: IconFolder,
+    title: "商品一覧",
+    url: "/dashboard/products",
+    icon: IconCookie,
+  },
+  {
+    title: "店舗管理",
+    url: "/stores",
+    icon: IconBuilding,
   },
   {
     title: "ユーザー管理",
@@ -76,7 +100,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <Link href="/">
                 <IconCompass className="!size-5" />
-                <span className="text-base font-semibold">Qompass</span>
+                <span className="text-base font-semibold">Quonpass</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

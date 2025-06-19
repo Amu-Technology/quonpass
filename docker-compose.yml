@@ -11,8 +11,12 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+      - /app/.next
     env_file:
       - ./.env
+    environment:
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
     depends_on:
       db:
         condition: service_started

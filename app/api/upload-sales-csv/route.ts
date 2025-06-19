@@ -88,34 +88,61 @@ export async function POST(request: Request) {
           },
         });
 
+        const productData = {
+          store_id: store.id,
+          image_url: 'no-image.jpg',
+          name: row['商品名'],
+          description: `CSVインポート: ${row['カテゴリ1'] || '未分類'}`,
+          status: status.active,
+          price: unitPrice,
+          stock: 0, // 在庫を0に設定
+          available_at: new Date(),
+        };
+
         if (!product) {
           console.log(`商品 '${row['商品名']}' を作成します。`);
           product = await prisma.products.create({
-            data: {
-              store_id: store.id,
-              image_url: 'no-image.jpg',
-              name: row['商品名'],
-              description: `CSVインポート: ${row['カテゴリ1'] || '未分類'}`,
-              status: status.active,
-              price: unitPrice,
-              stock: 9999,
-              available_at: new Date(),
-            },
+            data: productData,
+          });
+        } else {
+          // 既存商品の更新
+          console.log(`商品 '${row['商品名']}' を更新します。`);
+          product = await prisma.products.update({
+            where: { id: product.id },
+            data: productData,
           });
         }
 
-        // 売上記録の作成
-        await prisma.salesRecord.create({
-          data: {
+        // 売上記録の作成または更新
+        const existingSalesRecord = await prisma.salesRecord.findFirst({
+          where: {
             date: recordDate,
             store_id: store.id,
             product_id: product.id,
-            quantity: quantity,
-            unit_price: unitPrice,
-            sales_amount: salesAmount,
-            customer_attribute: null, // CSVに顧客属性がない場合はnull
           },
         });
+
+        const salesRecordData = {
+          date: recordDate,
+          store_id: store.id,
+          product_id: product.id,
+          quantity: quantity,
+          unit_price: unitPrice,
+          sales_amount: salesAmount,
+          customer_attribute: null, // CSVに顧客属性がない場合はnull
+        };
+
+        if (!existingSalesRecord) {
+          await prisma.salesRecord.create({
+            data: salesRecordData,
+          });
+        } else {
+          // 既存の売上記録を更新
+          await prisma.salesRecord.update({
+            where: { id: existingSalesRecord.id },
+            data: salesRecordData,
+          });
+        }
         
         importedCount++;
 
