@@ -1,7 +1,7 @@
 // app/api/sales-records/route.ts
 
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { parseISO, isValid } from 'date-fns';
 
 const prisma = new PrismaClient();
@@ -13,13 +13,13 @@ export async function GET(request: Request) {
     const endDateParam = searchParams.get('endDate');
     const storeIdParam = searchParams.get('storeId'); // 店舗IDでのフィルタリングも考慮
 
-    const whereClause: any = {};
+    const whereClause: Prisma.SalesRecordWhereInput = {};
 
     if (startDateParam && isValid(parseISO(startDateParam))) {
-      whereClause.date = { ...whereClause.date, gte: parseISO(startDateParam) };
+      whereClause.date = { gte: parseISO(startDateParam) };
     }
     if (endDateParam && isValid(parseISO(endDateParam))) {
-      whereClause.date = { ...whereClause.date, lte: parseISO(endDateParam) };
+      whereClause.date = { ...(whereClause.date as object), lte: parseISO(endDateParam) };
     }
     if (storeIdParam) {
       const storeId = parseInt(storeIdParam, 10);

@@ -1,0 +1,11 @@
+---
+description: TypeScriptファイル向けの基本ルール
+alwaysApply: true
+globs: "**/*.{ts,tsx}"
+---
+- any型はESLintエラーになるので、使用しないでください。
+- prisma/schema.prismaの最新スキーマを検証して、その型をインポートしてください。
+- 編集中のコードで、最新のprisma/schema.prismaが適用されていない場合は修正してください。
+- Prettierのフォーマットを適用してください。
+- バリテーションを行なってください。
+- 不要なimportを削除してください。
