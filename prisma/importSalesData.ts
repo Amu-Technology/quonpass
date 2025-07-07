@@ -86,7 +86,7 @@ async function importSalesData() {
 
       // 3. SalesRecord の挿入
       // ★修正: prisma.salesRecord を prisma.SalesRecord に変更
-      await prisma.SalesRecord.create({
+      await prisma.salesRecord.create({
         data: {
           date: recordDate,
           store_id: store!.id,

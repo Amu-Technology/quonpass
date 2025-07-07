@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const endDateParam = searchParams.get('endDate');
     const storeIdParam = searchParams.get('storeId'); // 店舗IDでのフィルタリングも考慮
 
-    let whereClause: any = {};
+    const whereClause: any = {};
 
     if (startDateParam && isValid(parseISO(startDateParam))) {
       whereClause.date = { ...whereClause.date, gte: parseISO(startDateParam) };
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const salesRecords = await prisma.SalesRecord.findMany({
+    const salesRecords = await prisma.salesRecord.findMany({
       where: whereClause,
       include: {
         store: {
