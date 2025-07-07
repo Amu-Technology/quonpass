@@ -7,6 +7,62 @@ import { isValid, parseISO } from 'date-fns';
 
 const prisma = new PrismaClient();
 
+/**
+ * @swagger
+ * /api/upload-sales-csv:
+ *   post:
+ *     summary: 売上CSVをアップロードするAPI
+ *     description: 売上CSVファイルをアップロードして売上データをインポートします
+ *     tags: [Upload]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: 売上CSVファイル
+ *               storeId:
+ *                 type: string
+ *                 description: 店舗ID
+ *             required:
+ *               - file
+ *               - storeId
+ *     responses:
+ *       200:
+ *         description: CSVアップロードに成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       row:
+ *                         type: object
+ *                       message:
+ *                         type: string
+ *       400:
+ *         description: リクエストエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: サーバーエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -22,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     const fileContent = await file.text();
-    const records: any[] = parse(fileContent, {
+    const records: Record<string, string>[] = parse(fileContent, {
       columns: true, // ヘッダーを列名として使用
       skip_empty_lines: true,
     });
@@ -38,11 +94,11 @@ export async function POST(request: Request) {
 
     let importedCount = 0;
     let errorCount = 0;
-    let errors: { row: any, message: string }[] = [];
+    const errors: { row: Record<string, string>, message: string }[] = [];
 
     for (const record of records) {
       try {
-        const row: {
+        const row = record as {
           '営業日': string;
           '商品コード': string;
           '商品名': string;
@@ -51,7 +107,7 @@ export async function POST(request: Request) {
           '平均単価': string;
           '売上数量': string;
           '売上金額': string;
-        } = record;
+        };
 
         // 日付の処理（「2025/06/17(火)」形式をISO形式に変換）
         let dateStr = row['営業日'];
@@ -146,10 +202,11 @@ export async function POST(request: Request) {
         
         importedCount++;
 
-      } catch (innerError: any) {
+      } catch (innerError: unknown) {
         errorCount++;
-        errors.push({ row: record, message: innerError.message || '不明なエラー' });
-        console.error(`Error processing row: ${JSON.stringify(record)} - ${innerError.message}`);
+        const errorMessage = innerError instanceof Error ? innerError.message : '不明なエラー';
+        errors.push({ row: record, message: errorMessage });
+        console.error(`Error processing row: ${JSON.stringify(record)} - ${errorMessage}`);
       }
     }
 
@@ -165,9 +222,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: `${importedCount} 件のレコードが正常にインポートされました。` });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to upload CSV:', error);
-    return NextResponse.json({ error: 'CSVのアップロードと処理に失敗しました。', details: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+    return NextResponse.json({ error: 'CSVのアップロードと処理に失敗しました。', details: errorMessage }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

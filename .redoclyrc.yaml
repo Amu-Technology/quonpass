@@ -1,0 +1,4 @@
+apiDefinitions:
+  main:
+    root: swagger.config.js
+    output: public/api-docs.html 

@@ -4,6 +4,51 @@ import { auth } from '@/auth'
 
 const prisma = new PrismaClient()
 
+/**
+ * @swagger
+ * /api/categories:
+ *   get:
+ *     summary: カテゴリ一覧を取得するAPI
+ *     description: アクティブなカテゴリの一覧を取得します
+ *     tags: [Categories]
+ *     responses:
+ *       200:
+ *         description: カテゴリ一覧の取得に成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   code:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   level:
+ *                     type: integer
+ *                   parent_id:
+ *                     type: integer
+ *                   status:
+ *                     type: string
+ *                   parent:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                   children:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *       500:
+ *         description: サーバーエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 export async function GET() {
   try {
     const categories = await prisma.categories.findMany({
@@ -29,6 +74,74 @@ export async function GET() {
   }
 }
 
+/**
+ * @swagger
+ * /api/categories:
+ *   post:
+ *     summary: カテゴリを登録するAPI
+ *     description: 新しいカテゴリを登録します
+ *     tags: [Categories]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: カテゴリコード
+ *               name:
+ *                 type: string
+ *                 description: カテゴリ名
+ *               level:
+ *                 type: integer
+ *                 description: カテゴリレベル
+ *               parent_id:
+ *                 type: integer
+ *                 description: 親カテゴリID
+ *             required:
+ *               - code
+ *               - name
+ *     responses:
+ *       200:
+ *         description: カテゴリ登録に成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 code:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 level:
+ *                   type: integer
+ *                 parent_id:
+ *                   type: integer
+ *                 status:
+ *                   type: string
+ *       401:
+ *         description: 認証が必要
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       400:
+ *         description: カテゴリコードが重複している
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: サーバーエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 export async function POST(request: Request) {
   try {
     const session = await auth()

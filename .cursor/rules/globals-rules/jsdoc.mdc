@@ -1,0 +1,6 @@
+---
+description: jsdoc
+globs: "**/*.{ts}"
+alwaysApply: true
+---
+- route.tsではJSDocを追加してください。

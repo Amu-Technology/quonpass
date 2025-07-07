@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -79,10 +79,6 @@ export default function AnalyticsPage() {
     fetchStores()
   }, [])
 
-  useEffect(() => {
-    fetchAnalytics()
-  }, [selectedPeriod, selectedStore, currentDate])
-
   const fetchStores = async () => {
     try {
       const response = await fetch("/api/stores")
@@ -95,7 +91,7 @@ export default function AnalyticsPage() {
     }
   }
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams({
@@ -114,7 +110,11 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedPeriod, selectedStore, currentDate])
+
+  useEffect(() => {
+    fetchAnalytics()
+  }, [fetchAnalytics])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("ja-JP", {

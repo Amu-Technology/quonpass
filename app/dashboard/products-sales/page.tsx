@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -26,6 +26,25 @@ interface AnalyticsData {
     sales: number
     percentage: number
   }>
+  registerCloseSummary: {
+    totalCustomers: number
+    totalSales: number
+    averageCustomerValue: number
+    maleCount: number
+    femaleCount: number
+    unspecifiedCount: number
+    paymentMethods: {
+      cash: number
+      credit: number
+      point: number
+      electronicMoney: number
+    }
+  }
+  comparison: {
+    salesRecordCustomers: number
+    registerCloseCustomers: number
+    difference: number
+  }
 }
 
 interface Store {
@@ -40,13 +59,32 @@ export default function ProductsSalesPage() {
   const [selectedStore, setSelectedStore] = useState("all")
   const [loading, setLoading] = useState(true)
 
+  const fetchAnalytics = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        period: selectedPeriod,
+        storeId: selectedStore,
+      })
+      const response = await fetch(`/api/analytics?${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAnalyticsData(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error)
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedPeriod, selectedStore])
+
   useEffect(() => {
     fetchStores()
   }, [])
 
   useEffect(() => {
     fetchAnalytics()
-  }, [selectedPeriod, selectedStore])
+  }, [fetchAnalytics])
 
   const fetchStores = async () => {
     try {
@@ -56,27 +94,7 @@ export default function ProductsSalesPage() {
         setStores(data)
       }
     } catch (error) {
-      console.error("店舗データの取得に失敗しました:", error)
-    }
-  }
-
-  const fetchAnalytics = async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        period: selectedPeriod,
-        ...(selectedStore !== "all" && { storeId: selectedStore })
-      })
-
-      const response = await fetch(`/api/analytics?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setAnalyticsData(data)
-      }
-    } catch (error) {
-      console.error("分析データの取得に失敗しました:", error)
-    } finally {
-      setLoading(false)
+      console.error("Failed to fetch stores:", error)
     }
   }
 
@@ -122,9 +140,10 @@ export default function ProductsSalesPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="day">1日</SelectItem>
-              <SelectItem value="week">週間</SelectItem>
-              <SelectItem value="month">月間</SelectItem>
+              <SelectItem value="day">日次</SelectItem>
+              <SelectItem value="week">週次</SelectItem>
+              <SelectItem value="month">月次</SelectItem>
+              <SelectItem value="year">年次</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -132,7 +151,7 @@ export default function ProductsSalesPage() {
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">店舗:</span>
           <Select value={selectedStore} onValueChange={setSelectedStore}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -151,12 +170,12 @@ export default function ProductsSalesPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">来店客数</CardTitle>
+            <CardTitle className="text-sm font-medium">総顧客数</CardTitle>
             <IconUsers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {analyticsData?.totalCustomers || 0}人
+              {analyticsData?.totalCustomers.toLocaleString()}人
             </div>
           </CardContent>
         </Card>
@@ -175,7 +194,7 @@ export default function ProductsSalesPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">売上総額</CardTitle>
+            <CardTitle className="text-sm font-medium">総売上</CardTitle>
             <IconTrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -187,12 +206,12 @@ export default function ProductsSalesPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">購買率</CardTitle>
+            <CardTitle className="text-sm font-medium">購入率</CardTitle>
             <IconChartBar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {analyticsData?.purchaseRate || 100}%
+              {analyticsData?.purchaseRate.toFixed(1) || "0.0"}%
             </div>
           </CardContent>
         </Card>
@@ -216,7 +235,7 @@ export default function ProductsSalesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analyticsData?.productComposition.map((product, index) => (
+                {analyticsData?.productComposition.slice(0, 10).map((product, index) => (
                   <div key={product.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">{index + 1}</Badge>
@@ -247,7 +266,7 @@ export default function ProductsSalesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analyticsData?.categorySales.map((category, index) => (
+                {analyticsData?.categorySales.slice(0, 10).map((category, index) => (
                   <div key={category.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{index + 1}</Badge>

@@ -4,6 +4,62 @@ import { parse } from "csv-parse/sync";
 
 const prisma = new PrismaClient();
 
+/**
+ * @swagger
+ * /api/upload-products-csv:
+ *   post:
+ *     summary: 商品CSVをアップロードするAPI
+ *     description: 商品CSVファイルをアップロードして商品データをインポートします
+ *     tags: [Upload]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: 商品CSVファイル
+ *               storeId:
+ *                 type: string
+ *                 description: 店舗ID
+ *             required:
+ *               - file
+ *               - storeId
+ *     responses:
+ *       200:
+ *         description: CSVアップロードに成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       row:
+ *                         type: object
+ *                       message:
+ *                         type: string
+ *       400:
+ *         description: リクエストエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: サーバーエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -22,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     const fileContent = await file.text();
-    const records: any[] = parse(fileContent, {
+    const records: Record<string, string>[] = parse(fileContent, {
       columns: true,
       skip_empty_lines: true,
     });
@@ -45,7 +101,7 @@ export async function POST(request: Request) {
 
     for (const record of records) {
       try {
-        const row: {
+        const row = record as {
           商品コード: string;
           商品名: string;
           カテゴリ1コード: string;
@@ -53,7 +109,7 @@ export async function POST(request: Request) {
           カテゴリ2コード: string;
           カテゴリ2: string;
           平均単価: string;
-        } = record;
+        };
 
         // 価格の処理（カンマと円マークを除去）
         const priceStr = row["平均単価"]?.replace(/[¥,]/g, '') || '0';
@@ -102,7 +158,7 @@ export async function POST(request: Request) {
                   status: "active",
                 },
               });
-            } catch (error) {
+            } catch {
               // 作成に失敗した場合は既存のカテゴリ2を再取得
               console.log(`カテゴリ2作成エラー、既存のカテゴリ2を検索: ${row["カテゴリ2コード"]}`);
               category2 = await prisma.categories.findFirst({
@@ -152,16 +208,15 @@ export async function POST(request: Request) {
         }
 
         importedCount++;
-      } catch (innerError: any) {
+      } catch (innerError: unknown) {
         errorCount++;
+        const errorMessage = innerError instanceof Error ? innerError.message : "不明なエラー";
         errors.push({
           row: record,
-          message: innerError.message || "不明なエラー",
+          message: errorMessage,
         });
         console.error(
-          `Error processing row: ${JSON.stringify(record)} - ${
-            innerError.message
-          }`
+          `Error processing row: ${JSON.stringify(record)} - ${errorMessage}`
         );
       }
     }
@@ -179,12 +234,12 @@ export async function POST(request: Request) {
         message: `${importedCount} 件の商品が正常にインポートされました。`,
       });
     }
-  } catch (error: any) {
+        } catch (error: unknown) {
     console.error("Failed to upload products CSV:", error);
     return NextResponse.json(
       {
         error: "CSVのアップロードと処理に失敗しました。",
-        details: error.message,
+        details: error instanceof Error ? error.message : "不明なエラー",
       },
       { status: 500 }
     );

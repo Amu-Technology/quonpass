@@ -6,6 +6,47 @@ import { parseISO, isValid } from 'date-fns';
 
 const prisma = new PrismaClient();
 
+/**
+ * @swagger
+ * /api/sales-records:
+ *   get:
+ *     summary: 売上記録を取得するAPI
+ *     description: 店舗の売上記録を日付範囲と店舗IDでフィルタリングして取得します
+ *     tags: [Sales]
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 開始日（YYYY-MM-DD形式）
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 終了日（YYYY-MM-DD形式）
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: integer
+ *         description: 店舗ID
+ *     responses:
+ *       200:
+ *         description: 売上記録の取得に成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/SalesRecord'
+ *       500:
+ *         description: サーバーエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

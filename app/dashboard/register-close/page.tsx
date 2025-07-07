@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { format, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subYears, subMonths, subWeeks } from 'date-fns';
+import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subYears, subMonths, subWeeks } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,56 +93,8 @@ export default function RegisterClosePage() {
   const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
 
-  // 店舗リストの取得
-  useEffect(() => {
-    async function fetchStores() {
-      try {
-        const response = await fetch('/api/stores');
-        if (!response.ok) {
-          throw new Error('Failed to fetch stores');
-        }
-        const data = await response.json();
-        setStores(data);
-      } catch (error) {
-        console.error('Error fetching stores:', error);
-        toast.error('店舗情報の取得に失敗しました。');
-      }
-    }
-    fetchStores();
-  }, []);
 
-  // 期間に基づいて日付を設定
-  const setPeriodDates = (type: PeriodType) => {
-    const now = new Date();
-    let start: Date;
-    let end: Date;
-
-    switch (type) {
-      case 'year':
-        start = startOfYear(now);
-        end = endOfYear(now);
-        break;
-      case 'month':
-        start = startOfMonth(now);
-        end = endOfMonth(now);
-        break;
-      case 'week':
-        start = startOfWeek(now, { weekStartsOn: 1 }); // 月曜日開始
-        end = endOfWeek(now, { weekStartsOn: 1 });
-        break;
-    }
-
-    setStartDate(format(start, 'yyyy-MM-dd'));
-    setEndDate(format(end, 'yyyy-MM-dd'));
-  };
-
-  // 期間タイプが変更された時の処理
-  useEffect(() => {
-    setPeriodDates(periodType);
-  }, [periodType]);
-
-  // レジクローズデータの取得
-  const fetchRegisterCloses = async () => {
+  const fetchRegisterCloses = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -164,6 +116,63 @@ export default function RegisterClosePage() {
     } catch (error) {
       console.error('Error fetching register closes:', error);
       toast.error('レジクローズデータの取得に失敗しました。');
+    } finally {
+      setLoading(false);
+    }
+  }, [startDate, endDate, selectedStoreId]);
+
+  useEffect(() => {
+    fetchRegisterCloses();
+  }, [fetchRegisterCloses]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      toast.error('CSVファイルを選択してください。');
+      return;
+    }
+
+    if (selectedStoreId === 'all') {
+      toast.error('店舗を選択してください。');
+      return;
+    }
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('storeId', selectedStoreId);
+
+    try {
+      const response = await fetch('/api/upload-register-close-csv', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success(result.message || 'CSVファイルが正常にアップロードされました。');
+        setFile(null);
+        fetchRegisterCloses();
+      } else {
+        toast.error(result.error || 'CSVファイルのアップロードに失敗しました。', {
+          description: result.details || '不明なエラーが発生しました。',
+        });
+        if (result.errors && result.errors.length > 0) {
+          result.errors.forEach((err: { row: Record<string, unknown>, message: string }) => {
+            console.error(`Error in row ${JSON.stringify(err.row)}: ${err.message}`);
+          });
+          toast.warning(`一部の行でエラーが発生しました。詳細はコンソールを確認してください (${result.errors.length}件)。`);
+        }
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('ネットワークエラーまたはサーバーエラーが発生しました。');
     } finally {
       setLoading(false);
     }
@@ -240,65 +249,6 @@ export default function RegisterClosePage() {
     }
   };
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      fetchRegisterCloses();
-    }
-  }, [startDate, endDate, selectedStoreId]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      toast.error('CSVファイルを選択してください。');
-      return;
-    }
-
-    if (selectedStoreId === 'all') {
-      toast.error('店舗を選択してください。');
-      return;
-    }
-
-    setLoading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('storeId', selectedStoreId);
-
-    try {
-      const response = await fetch('/api/upload-register-close-csv', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast.success(result.message || 'CSVファイルが正常にアップロードされました。');
-        setFile(null);
-        fetchRegisterCloses();
-      } else {
-        toast.error(result.error || 'CSVファイルのアップロードに失敗しました。', {
-          description: result.details || '不明なエラーが発生しました。',
-        });
-        if (result.errors && result.errors.length > 0) {
-          result.errors.forEach((err: { row: any, message: string }) => {
-            console.error(`Error in row ${JSON.stringify(err.row)}: ${err.message}`);
-          });
-          toast.warning(`一部の行でエラーが発生しました。詳細はコンソールを確認してください (${result.errors.length}件)。`);
-        }
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('ネットワークエラーまたはサーバーエラーが発生しました。');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // サマリー計算
   const calculateSummary = (data: RegisterClose[]) => {
     if (data.length === 0) return null;
@@ -350,6 +300,66 @@ export default function RegisterClosePage() {
     const sign = value >= 0 ? '+' : '';
     return `${sign}${value.toLocaleString()}`;
   };
+
+  const filteredRegisterCloses = registerCloses;
+
+
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("ja-JP");
+  };
+
+  // 店舗リストの取得
+  useEffect(() => {
+    async function fetchStores() {
+      try {
+        const response = await fetch('/api/stores');
+        if (!response.ok) {
+          throw new Error('Failed to fetch stores');
+        }
+        const data = await response.json();
+        setStores(data);
+      } catch (error) {
+        console.error('Error fetching stores:', error);
+        toast.error('店舗情報の取得に失敗しました。');
+      }
+    }
+    fetchStores();
+  }, []);
+
+  // 期間に基づいて日付を設定
+  const setPeriodDates = (type: PeriodType) => {
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+
+    switch (type) {
+      case 'year':
+        start = startOfYear(now);
+        end = endOfYear(now);
+        break;
+      case 'month':
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+        break;
+      case 'week':
+        start = startOfWeek(now, { weekStartsOn: 1 }); // 月曜日開始
+        end = endOfWeek(now, { weekStartsOn: 1 });
+        break;
+    }
+
+    setStartDate(format(start, 'yyyy-MM-dd'));
+    setEndDate(format(end, 'yyyy-MM-dd'));
+  };
+
+  // 期間タイプが変更された時の処理
+  useEffect(() => {
+    setPeriodDates(periodType);
+  }, [periodType]);
+
+  if (loading) {
+    return <div className="p-4">読み込み中...</div>;
+  }
 
   return (
     <div className="container mx-10 py-10 space-y-6">
@@ -519,30 +529,18 @@ export default function RegisterClosePage() {
                       <div className="text-center">
                         <p className="text-sm text-gray-600">現金</p>
                         <p className="text-lg font-semibold">¥{comparisonData.current.totalCash.toLocaleString()}</p>
-                        <p className={`text-sm ${comparisonData.difference.totalCash >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatDifference(comparisonData.difference.totalCash)} ({formatPercentage(comparisonData.percentage.totalCash)})
-                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-gray-600">クレジット</p>
                         <p className="text-lg font-semibold">¥{comparisonData.current.totalCredit.toLocaleString()}</p>
-                        <p className={`text-sm ${comparisonData.difference.totalCredit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatDifference(comparisonData.difference.totalCredit)} ({formatPercentage(comparisonData.percentage.totalCredit)})
-                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-gray-600">ポイント</p>
                         <p className="text-lg font-semibold">¥{comparisonData.current.totalPoint.toLocaleString()}</p>
-                        <p className={`text-sm ${comparisonData.difference.totalPoint >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatDifference(comparisonData.difference.totalPoint)} ({formatPercentage(comparisonData.percentage.totalPoint)})
-                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-gray-600">電子マネー</p>
                         <p className="text-lg font-semibold">¥{comparisonData.current.totalElectronicMoney.toLocaleString()}</p>
-                        <p className={`text-sm ${comparisonData.difference.totalElectronicMoney >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatDifference(comparisonData.difference.totalElectronicMoney)} ({formatPercentage(comparisonData.percentage.totalElectronicMoney)})
-                        </p>
                       </div>
                     </div>
                   </div>
@@ -583,10 +581,10 @@ export default function RegisterClosePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {registerCloses.length > 0 ? (
-                    registerCloses.map((record) => (
+                  {filteredRegisterCloses.length > 0 ? (
+                    filteredRegisterCloses.map((record) => (
                       <TableRow key={record.id}>
-                        <TableCell>{format(parseISO(record.date), 'yyyy/MM/dd')}</TableCell>
+                        <TableCell>{formatDate(record.date)}</TableCell>
                         <TableCell>{record.store.name}</TableCell>
                         <TableCell className="text-right">{record.groups_count}</TableCell>
                         <TableCell className="text-right">{record.customer_count}</TableCell>

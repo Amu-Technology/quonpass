@@ -4,6 +4,62 @@ import { parse } from "csv-parse/sync";
 
 const prisma = new PrismaClient();
 
+/**
+ * @swagger
+ * /api/upload-register-close-csv:
+ *   post:
+ *     summary: レジクローズCSVをアップロードするAPI
+ *     description: レジクローズCSVファイルをアップロードしてレジクローズデータをインポートします
+ *     tags: [Upload]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: レジクローズCSVファイル
+ *               storeId:
+ *                 type: string
+ *                 description: 店舗ID
+ *             required:
+ *               - file
+ *               - storeId
+ *     responses:
+ *       200:
+ *         description: CSVアップロードに成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       row:
+ *                         type: object
+ *                       message:
+ *                         type: string
+ *       400:
+ *         description: リクエストエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: サーバーエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();

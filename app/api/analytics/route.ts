@@ -1,10 +1,100 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-import { auth } from '@/auth'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, subMonths, subYears } from 'date-fns'
 
 const prisma = new PrismaClient()
 
+/**
+ * @swagger
+ * /api/analytics:
+ *   get:
+ *     summary: 売上分析を取得するAPI
+ *     description: 期間、店舗ID、日付範囲でフィルタリングして売上分析を取得します
+ *     tags: [Analytics]
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, year]
+ *         description: 期間（month, week, day, year）
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: integer
+ *         description: 店舗ID
+ *       - in: query
+ *         name: currentDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 基準日
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 開始日
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 終了日
+ *     responses:
+ *       200:
+ *         description: 売上分析の取得に成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalCustomers:
+ *                   type: integer
+ *                 averageCustomerValue:
+ *                   type: number
+ *                 totalSales:
+ *                   type: number
+ *                 purchaseRate:
+ *                   type: number
+ *                 productComposition:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                       sales:
+ *                         type: number
+ *                       percentage:
+ *                         type: number
+ *                 dailySales:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       date:
+ *                         type: string
+ *                       sales:
+ *                         type: number
+ *                 categorySales:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                       sales:
+ *                         type: number
+ *                       percentage:
+ *                         type: number
+ *       500:
+ *         description: サーバーエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 export async function GET(request: Request) {
   try {
     // 認証チェックを一時的に無効化
@@ -207,12 +297,23 @@ export async function GET(request: Request) {
       where: {
         ...prevDateFilter,
         ...storeFilter
+      },
+      include: {
+        store: true,
+        product: {
+          include: {
+            category: true
+          }
+        }
       }
     })
     const prevRegisterCloseData = await prisma.registerClose.findMany({
       where: {
         ...prevDateFilter,
         ...storeFilter
+      },
+      include: {
+        store: true
       }
     })
 
@@ -229,7 +330,14 @@ export async function GET(request: Request) {
   }
 }
 
-function calculateAnalytics(salesData: any[], registerCloseData: any[], productsData: any[], categoriesData: any[], prevSalesData: any[], prevRegisterCloseData: any[]) {
+function calculateAnalytics(
+  salesData: Prisma.SalesRecordGetPayload<{ include: { store: true; product: { include: { category: true } } } }>[],
+  registerCloseData: Prisma.RegisterCloseGetPayload<{ include: { store: true } }>[],
+  productsData: Prisma.productsGetPayload<{ include: { stores: true; category: true } }>[],
+  categoriesData: Prisma.categoriesGetPayload<object>[],
+  prevSalesData: Prisma.SalesRecordGetPayload<{ include: { store: true; product: { include: { category: true } } } }>[],
+  prevRegisterCloseData: Prisma.RegisterCloseGetPayload<{ include: { store: true } }>[]
+) {
   if (salesData.length === 0 && registerCloseData.length === 0) {
     return {
       totalCustomers: 0,
@@ -268,7 +376,7 @@ function calculateAnalytics(salesData: any[], registerCloseData: any[], products
   const registerCloseAnalysis = analyzeRegisterClose(registerCloseData)
   const prevRegisterCloseAnalysis = analyzeRegisterClose(prevRegisterCloseData)
   // 商品・カテゴリ分析
-  const productCategoryAnalysis = analyzeProductsAndCategories(salesData, productsData, categoriesData)
+  const productCategoryAnalysis = analyzeProductsAndCategories(salesData)
 
   // 統合分析
   const totalCustomers = Math.max(salesRecordAnalysis.totalCustomers, registerCloseAnalysis.totalCustomers)
@@ -318,7 +426,7 @@ function calculateAnalytics(salesData: any[], registerCloseData: any[], products
   }
 }
 
-function analyzeSalesRecords(salesData: any[]) {
+function analyzeSalesRecords(salesData: Prisma.SalesRecordGetPayload<{ include: { store: true; product: { include: { category: true } } } }>[]) {
   if (salesData.length === 0) {
     return {
       totalCustomers: 0,
@@ -346,7 +454,7 @@ function analyzeSalesRecords(salesData: any[]) {
   }
 }
 
-function analyzeRegisterClose(registerCloseData: any[]) {
+function analyzeRegisterClose(registerCloseData: Prisma.RegisterCloseGetPayload<{ include: { store: true } }>[]) {
   if (registerCloseData.length === 0) {
     return {
       totalCustomers: 0,
@@ -390,9 +498,9 @@ function analyzeRegisterClose(registerCloseData: any[]) {
   }
 }
 
-function analyzeProductsAndCategories(salesData: any[], productsData: any[], categoriesData: any[]) {
+function analyzeProductsAndCategories(salesData: Prisma.SalesRecordGetPayload<{ include: { store: true; product: { include: { category: true } } } }>[]) {
   // 商品構成比
-  const productSales = salesData.reduce((acc, record) => {
+  const productSales = salesData.reduce<Record<string, number>>((acc, record) => {
     const productName = record.product.name
     if (!acc[productName]) {
       acc[productName] = 0
@@ -414,7 +522,7 @@ function analyzeProductsAndCategories(salesData: any[], productsData: any[], cat
     .sort((a, b) => b.sales - a.sales)
 
   // 日別売上
-  const dailySales = salesData.reduce((acc, record) => {
+  const dailySales = salesData.reduce<Record<string, number>>((acc, record) => {
     const date = record.date.toISOString().split('T')[0]
     if (!acc[date]) {
       acc[date] = 0
@@ -431,7 +539,7 @@ function analyzeProductsAndCategories(salesData: any[], productsData: any[], cat
     .sort((a, b) => a.date.localeCompare(b.date))
 
   // カテゴリ別売上
-  const categorySales = salesData.reduce((acc, record) => {
+  const categorySales = salesData.reduce<Record<string, number>>((acc, record) => {
     const categoryName = record.product.category?.name || '未分類'
     if (!acc[categoryName]) {
       acc[categoryName] = 0
