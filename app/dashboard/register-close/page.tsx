@@ -352,7 +352,7 @@ export default function RegisterClosePage() {
   };
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-10 py-10 space-y-6">
       <h1 className="text-3xl font-bold mb-6">レジ記録一覧</h1>
 
       {/* CSVアップロードセクション */}
