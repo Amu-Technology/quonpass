@@ -58,12 +58,17 @@ const navMain = [
   },
   {
     title: "発注管理",
-    url: "/order",
+    url: "/dashboard/orders",
     icon: IconTruckDelivery,
   },
   {
     title: "商品一覧",
     url: "/dashboard/products",
+    icon: IconCookie,
+  },
+  {
+    title: "商品管理",
+    url: "/dashboard/items",
     icon: IconCookie,
   },
   {
