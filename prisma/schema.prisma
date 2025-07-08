@@ -41,41 +41,57 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model order_items {
+model item {
+  id                     Int           @id @default(autoincrement())
+  type                   orderItemType
+  name                   String
+  unit                   unit
+  minimum_order_quantity String
+  price                  Decimal       @db.Decimal(10, 2)
+  orderItem              orderItem[]
+}
+
+model orderItem {
   id         Int       @id @default(autoincrement())
-  order_id   Int?
-  product_id Int?
+  order_id   Int
+  item_id    Int
   quantity   Int
-  price      Decimal   @db.Decimal(10, 2)
+  unit_price Decimal   @db.Decimal(10, 2)
   created_at DateTime? @default(now()) @db.Timestamp(6)
-  orders     orders?   @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  products   products? @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  orders     orders    @relation(fields: [ordersId], references: [id])
+  ordersId   Int
+  item       item      @relation(fields: [itemId], references: [id])
+  itemId     Int
 }
 
 model orders {
-  id           Int           @id @default(autoincrement())
-  store_id     Int
-  user_id      String?       @db.Uuid
-  total_amount Decimal       @db.Decimal(10, 2)
-  status       status
-  created_at   DateTime?     @default(now()) @db.Timestamp(6)
-  updated_at   DateTime?     @default(now()) @db.Timestamp(6)
-  order_items  order_items[]
-  stores       stores        @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  users        users?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                     Int         @id @default(autoincrement())
+  store_id               Int
+  user_id                String?     @db.Uuid
+  other_delivery_address String?
+  holiday                holiday?
+  request_message        String?
+  total_amount           Decimal     @db.Decimal(10, 2)
+  status                 status
+  order_at               DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?   @default(now()) @db.Timestamp(6)
+  stores                 stores      @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                  users?      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orderItem              orderItem[]
 }
 
 model SalesRecord {
-  id                 Int       @id @default(autoincrement())
-  date               DateTime  @db.Date // CSVの「日付」
-  store_id           Int       // CSVの「店舗」に対応するID
-  product_id         Int       // CSVの「商品名」に対応するID
-  quantity           Int       // CSVの「数量」
-  unit_price         Decimal   @db.Decimal(10, 2) // CSVの「単価」
-  sales_amount       Decimal   @db.Decimal(10, 2) // CSVの「売上」
-  customer_attribute String?   // CSVの「顧客属性」
-  created_at         DateTime  @default(now()) @db.Timestamp(6)
-  updated_at         DateTime  @updatedAt @db.Timestamp(6)
+  id                 Int      @id @default(autoincrement())
+  date               DateTime @db.Date // CSVの「日付」
+  store_id           Int // CSVの「店舗」に対応するID
+  product_id         Int // CSVの「商品名」に対応するID
+  quantity           Int // CSVの「数量」
+  unit_price         Decimal  @db.Decimal(10, 2) // CSVの「単価」
+  sales_amount       Decimal  @db.Decimal(10, 2) // CSVの「売上」
+  customer_attribute String? // CSVの「顧客属性」
+  created_at         DateTime @default(now()) @db.Timestamp(6)
+  updated_at         DateTime @updatedAt @db.Timestamp(6)
 
   // リレーション
   store   stores   @relation(fields: [store_id], references: [id])
@@ -86,37 +102,36 @@ model SalesRecord {
 }
 
 model products {
-  id           Int           @id @default(autoincrement())
-  store_id     Int
-  category_id  Int?          // カテゴリIDを追加
-  image_url    String
-  name         String
-  description  String?
-  status       status
-  price        Decimal       @db.Decimal(10, 2)
-  stock        Int
-  available_at DateTime      @db.Timestamp(6)
-  created_at   DateTime?     @default(now()) @db.Timestamp(6)
-  updated_at   DateTime?     @default(now()) @db.Timestamp(6)
-  order_items  order_items[]
+  id            Int           @id @default(autoincrement())
+  store_id      Int
+  category_id   Int? // カテゴリIDを追加
+  image_url     String
+  name          String
+  description   String?
+  status        status
+  price         Decimal       @db.Decimal(10, 2)
+  stock         Int
+  available_at  DateTime      @db.Timestamp(6)
+  created_at    DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?     @default(now()) @db.Timestamp(6)
   sales_records SalesRecord[]
-  stores       stores        @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  category     categories?   @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  stores        stores        @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category      categories?   @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
 model stores {
-  id         Int        @id @default(autoincrement())
-  name       String
-  address    String
-  phone      String
-  email      String
-  status     status     @default(active)
-  created_at DateTime?  @default(now()) @db.Timestamp(6)
-  updated_at DateTime?  @default(now()) @db.Timestamp(6)
-  orders     orders[]
-  products   products[]
-  users      users[]
-  sales_records SalesRecord[] // ★追加
+  id              Int             @id @default(autoincrement())
+  name            String
+  address         String
+  phone           String
+  email           String
+  status          status          @default(active)
+  created_at      DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?       @default(now()) @db.Timestamp(6)
+  orders          orders[]
+  products        products[]
+  users           users[]
+  sales_records   SalesRecord[] // ★追加
   register_closes RegisterClose[] // レジクローズデータ
 }
 
@@ -137,104 +152,104 @@ model users {
 }
 
 model categories {
-  id          Int       @id @default(autoincrement())
-  code        String    @unique // カテゴリコード（例：00000014）
-  name        String    // カテゴリ名（例：テリーヌ（セット））
-  level       Int       @default(1) // カテゴリレベル（1: カテゴリ1, 2: カテゴリ2）
-  parent_id   Int?      // 親カテゴリID（カテゴリ2の場合）
-  status      status    @default(active)
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-  updated_at  DateTime? @default(now()) @db.Timestamp(6)
-  
-  products    products[]
-  children    categories[] @relation("CategoryHierarchy")
-  parent      categories?  @relation("CategoryHierarchy", fields: [parent_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  id         Int       @id @default(autoincrement())
+  code       String    @unique // カテゴリコード（例：00000014）
+  name       String // カテゴリ名（例：テリーヌ（セット））
+  level      Int       @default(1) // カテゴリレベル（1: カテゴリ1, 2: カテゴリ2）
+  parent_id  Int? // 親カテゴリID（カテゴリ2の場合）
+  status     status    @default(active)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+
+  products products[]
+  children categories[] @relation("CategoryHierarchy")
+  parent   categories?  @relation("CategoryHierarchy", fields: [parent_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
 model RegisterClose {
-  id                    Int       @id @default(autoincrement())
-  date                  DateTime  @db.Date // 営業日
-  store_id              Int       // 店舗ID
-  groups_count          Int       // 組数(組)
-  customer_count        Int       // 客数
-  male_count            Int       // 男性
-  female_count          Int       // 女性
-  unspecified_count     Int       // 選択なし
-  customer_unit_price   Decimal   @db.Decimal(10, 2) // 客単価
-  total_items_sold      Int       // 総売上点数(点)
-  total_sales           Decimal   @db.Decimal(10, 2) // 売上
-  consumption_tax       Decimal   @db.Decimal(10, 2) // 消費税
-  sales_10_percent      Decimal   @db.Decimal(10, 2) // 売上(10%)
-  tax_10_percent        Decimal   @db.Decimal(10, 2) // 消費税(10%)
-  sales_8_percent       Decimal   @db.Decimal(10, 2) // 売上(8%)
-  tax_8_percent         Decimal   @db.Decimal(10, 2) // 消費税(8%)
-  sales_tax_free        Decimal   @db.Decimal(10, 2) // 売上(非課税)
-  sales_non_taxable     Decimal   @db.Decimal(10, 2) // 売上(不課税)
-  net_sales             Decimal   @db.Decimal(10, 2) // 純売上
-  duty_free_items_general Int     // 免税商品点数（一般品）
-  duty_free_items_consumables Int // 免税商品点数（消耗品）
-  duty_free_amount_general Decimal @db.Decimal(10, 2) // 免税額（一般品）
-  duty_free_amount_consumables Decimal @db.Decimal(10, 2) // 免税額（消耗品）
-  service_charge_count  Int       // サービス料件数
-  service_charge        Decimal   @db.Decimal(10, 2) // サービス料
-  late_night_count      Int       // 深夜料件数
-  late_night_charge     Decimal   @db.Decimal(10, 2) // 深夜料
-  discount_count        Int       // 値割引件数
-  discount_amount       Decimal   @db.Decimal(10, 2) // 値割引
-  fraction_discount_count Int     // 端数値引件数
-  fraction_discount_amount Decimal @db.Decimal(10, 2) // 端数値引額
-  excluded_count        Int       // 売上除外件数
-  excluded_amount       Decimal   @db.Decimal(10, 2) // 売上除外金額
-  cash_count            Int       // 現金件数
-  cash_amount           Decimal   @db.Decimal(10, 2) // 現金
-  credit_count          Int       // クレジット件数
-  credit_amount         Decimal   @db.Decimal(10, 2) // クレジット
-  point_count           Int       // ポイント件数
-  point_amount          Decimal   @db.Decimal(10, 2) // ポイント
-  electronic_money_count Int      // 電子マネー件数
-  electronic_money_amount Decimal @db.Decimal(10, 2) // 電子マネー
-  gift_card_no_change_count Int   // 商品券(釣無し)件数
-  gift_card_no_change_amount Decimal @db.Decimal(10, 2) // 商品券(釣無し)
-  gift_card_difference  Decimal   @db.Decimal(10, 2) // 商品券 差額
-  gift_card_with_change_count Int // 商品券(釣有り)件数
-  gift_card_with_change_amount Decimal @db.Decimal(10, 2) // 商品券(釣有り)
-  gift_card_cash_change Decimal   @db.Decimal(10, 2) // 商品券 現金釣銭
-  credit_sale_count     Int       // 掛売件数
-  credit_sale_amount    Decimal   @db.Decimal(10, 2) // 掛売
-  cash_on_hand          Decimal   @db.Decimal(10, 2) // お預かり現金
-  change_amount         Decimal   @db.Decimal(10, 2) // お釣り
-  receipt_count         Int       // 領収書
-  cancel_count          Int       // 取消(赤伝票)件数
-  cancel_amount         Decimal   @db.Decimal(10, 2) // 取消(赤伝票)
-  correction_count      Int       // 訂正(黒伝票)件数
-  correction_amount     Decimal   @db.Decimal(10, 2) // 訂正(黒伝票)
-  uncollected_count     Int       // 未回収件数
-  uncollected_amount    Decimal   @db.Decimal(10, 2) // 未回収金額
-  cash_balance          Decimal   @db.Decimal(10, 2) // 現金在高
-  cash_at_open          Decimal   @db.Decimal(10, 2) // レジオープン時現金
-  deposit_count         Int       // 入金件数
-  deposit_amount        Decimal   @db.Decimal(10, 2) // 入金
-  withdrawal_count      Int       // 出金件数
-  withdrawal_amount     Decimal   @db.Decimal(10, 2) // 出金
-  input_cash            Decimal   @db.Decimal(10, 2) // [入力] 現金
-  input_credit          Decimal   @db.Decimal(10, 2) // [入力] クレジット
-  input_point           Decimal   @db.Decimal(10, 2) // [入力] ポイント
-  input_electronic_money Decimal   @db.Decimal(10, 2) // [入力] 電子マネー
-  input_gift_card_no_change Decimal @db.Decimal(10, 2) // [入力] 商品券(釣無し)
-  input_gift_card_with_change Decimal @db.Decimal(10, 2) // [入力] 商品券(釣有り)
-  input_credit_sale     Decimal   @db.Decimal(10, 2) // [入力] 掛売
-  total_difference      Decimal   @db.Decimal(10, 2) // 差異合計
-  difference_reason     String?   // 差異理由
-  opening_fund          Decimal   @db.Decimal(10, 2) // 開店準備金
-  store_deposit         Decimal   @db.Decimal(10, 2) // 店舗保管金
-  bank_transfer         Decimal   @db.Decimal(10, 2) // 銀行振込
-  safe_deposit          Decimal   @db.Decimal(10, 2) // 貸金庫預け
-  security_deposit      Decimal   @db.Decimal(10, 2) // 警備会社預け
-  created_at            DateTime  @default(now()) @db.Timestamp(6)
-  updated_at            DateTime  @updatedAt @db.Timestamp(6)
+  id                           Int      @id @default(autoincrement())
+  date                         DateTime @db.Date // 営業日
+  store_id                     Int // 店舗ID
+  groups_count                 Int // 組数(組)
+  customer_count               Int // 客数
+  male_count                   Int // 男性
+  female_count                 Int // 女性
+  unspecified_count            Int // 選択なし
+  customer_unit_price          Decimal  @db.Decimal(10, 2) // 客単価
+  total_items_sold             Int // 総売上点数(点)
+  total_sales                  Decimal  @db.Decimal(10, 2) // 売上
+  consumption_tax              Decimal  @db.Decimal(10, 2) // 消費税
+  sales_10_percent             Decimal  @db.Decimal(10, 2) // 売上(10%)
+  tax_10_percent               Decimal  @db.Decimal(10, 2) // 消費税(10%)
+  sales_8_percent              Decimal  @db.Decimal(10, 2) // 売上(8%)
+  tax_8_percent                Decimal  @db.Decimal(10, 2) // 消費税(8%)
+  sales_tax_free               Decimal  @db.Decimal(10, 2) // 売上(非課税)
+  sales_non_taxable            Decimal  @db.Decimal(10, 2) // 売上(不課税)
+  net_sales                    Decimal  @db.Decimal(10, 2) // 純売上
+  duty_free_items_general      Int // 免税商品点数（一般品）
+  duty_free_items_consumables  Int // 免税商品点数（消耗品）
+  duty_free_amount_general     Decimal  @db.Decimal(10, 2) // 免税額（一般品）
+  duty_free_amount_consumables Decimal  @db.Decimal(10, 2) // 免税額（消耗品）
+  service_charge_count         Int // サービス料件数
+  service_charge               Decimal  @db.Decimal(10, 2) // サービス料
+  late_night_count             Int // 深夜料件数
+  late_night_charge            Decimal  @db.Decimal(10, 2) // 深夜料
+  discount_count               Int // 値割引件数
+  discount_amount              Decimal  @db.Decimal(10, 2) // 値割引
+  fraction_discount_count      Int // 端数値引件数
+  fraction_discount_amount     Decimal  @db.Decimal(10, 2) // 端数値引額
+  excluded_count               Int // 売上除外件数
+  excluded_amount              Decimal  @db.Decimal(10, 2) // 売上除外金額
+  cash_count                   Int // 現金件数
+  cash_amount                  Decimal  @db.Decimal(10, 2) // 現金
+  credit_count                 Int // クレジット件数
+  credit_amount                Decimal  @db.Decimal(10, 2) // クレジット
+  point_count                  Int // ポイント件数
+  point_amount                 Decimal  @db.Decimal(10, 2) // ポイント
+  electronic_money_count       Int // 電子マネー件数
+  electronic_money_amount      Decimal  @db.Decimal(10, 2) // 電子マネー
+  gift_card_no_change_count    Int // 商品券(釣無し)件数
+  gift_card_no_change_amount   Decimal  @db.Decimal(10, 2) // 商品券(釣無し)
+  gift_card_difference         Decimal  @db.Decimal(10, 2) // 商品券 差額
+  gift_card_with_change_count  Int // 商品券(釣有り)件数
+  gift_card_with_change_amount Decimal  @db.Decimal(10, 2) // 商品券(釣有り)
+  gift_card_cash_change        Decimal  @db.Decimal(10, 2) // 商品券 現金釣銭
+  credit_sale_count            Int // 掛売件数
+  credit_sale_amount           Decimal  @db.Decimal(10, 2) // 掛売
+  cash_on_hand                 Decimal  @db.Decimal(10, 2) // お預かり現金
+  change_amount                Decimal  @db.Decimal(10, 2) // お釣り
+  receipt_count                Int // 領収書
+  cancel_count                 Int // 取消(赤伝票)件数
+  cancel_amount                Decimal  @db.Decimal(10, 2) // 取消(赤伝票)
+  correction_count             Int // 訂正(黒伝票)件数
+  correction_amount            Decimal  @db.Decimal(10, 2) // 訂正(黒伝票)
+  uncollected_count            Int // 未回収件数
+  uncollected_amount           Decimal  @db.Decimal(10, 2) // 未回収金額
+  cash_balance                 Decimal  @db.Decimal(10, 2) // 現金在高
+  cash_at_open                 Decimal  @db.Decimal(10, 2) // レジオープン時現金
+  deposit_count                Int // 入金件数
+  deposit_amount               Decimal  @db.Decimal(10, 2) // 入金
+  withdrawal_count             Int // 出金件数
+  withdrawal_amount            Decimal  @db.Decimal(10, 2) // 出金
+  input_cash                   Decimal  @db.Decimal(10, 2) // [入力] 現金
+  input_credit                 Decimal  @db.Decimal(10, 2) // [入力] クレジット
+  input_point                  Decimal  @db.Decimal(10, 2) // [入力] ポイント
+  input_electronic_money       Decimal  @db.Decimal(10, 2) // [入力] 電子マネー
+  input_gift_card_no_change    Decimal  @db.Decimal(10, 2) // [入力] 商品券(釣無し)
+  input_gift_card_with_change  Decimal  @db.Decimal(10, 2) // [入力] 商品券(釣有り)
+  input_credit_sale            Decimal  @db.Decimal(10, 2) // [入力] 掛売
+  total_difference             Decimal  @db.Decimal(10, 2) // 差異合計
+  difference_reason            String? // 差異理由
+  opening_fund                 Decimal  @db.Decimal(10, 2) // 開店準備金
+  store_deposit                Decimal  @db.Decimal(10, 2) // 店舗保管金
+  bank_transfer                Decimal  @db.Decimal(10, 2) // 銀行振込
+  safe_deposit                 Decimal  @db.Decimal(10, 2) // 貸金庫預け
+  security_deposit             Decimal  @db.Decimal(10, 2) // 警備会社預け
+  created_at                   DateTime @default(now()) @db.Timestamp(6)
+  updated_at                   DateTime @updatedAt @db.Timestamp(6)
 
   // リレーション
-  store                 stores    @relation(fields: [store_id], references: [id])
+  store stores @relation(fields: [store_id], references: [id])
 
   // 日付と店舗の組み合わせでユニーク制約
   @@unique([date, store_id])
@@ -250,4 +265,41 @@ enum status {
   active
   inactive
   archived
+}
+
+enum unit {
+  g
+  kg
+  袋
+  本
+  枚
+  巻
+  個
+  冊
+  式
+  束
+  台
+  箱
+  粒
+  ケース
+  セット
+  バルク
+  ロット
+}
+
+enum orderItemType {
+  食材
+  商品
+  資材
+  特殊
+}
+
+enum holiday {
+  月
+  火
+  水
+  木
+  金
+  土
+  日
 }
