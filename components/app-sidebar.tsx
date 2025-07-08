@@ -14,6 +14,7 @@ import {
   IconTarget,
   IconCashRegister,
   IconTruckDelivery,
+  IconDatabase,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -57,12 +58,17 @@ const navMain = [
   },
   {
     title: "発注管理",
-    url: "/order",
+    url: "/dashboard/orders",
     icon: IconTruckDelivery,
   },
   {
     title: "商品一覧",
     url: "/dashboard/products",
+    icon: IconCookie,
+  },
+  {
+    title: "商品管理",
+    url: "/dashboard/items",
     icon: IconCookie,
   },
   {
@@ -74,6 +80,11 @@ const navMain = [
     title: "ユーザー管理",
     url: "/",
     icon: IconUsers,
+  },
+  {
+    title: "ER図",
+    url: "/erd",
+    icon: IconDatabase,
   },
 ];
 
