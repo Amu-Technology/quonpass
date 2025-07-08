@@ -51,6 +51,10 @@ export async function GET() {
       {
         name: 'Upload',
         description: 'CSVアップロードのAPI'
+      },
+      {
+        name: 'Documentation',
+        description: 'ドキュメント関連のAPI'
       }
     ],
     paths: {
@@ -805,6 +809,35 @@ export async function GET() {
                 'application/json': {
                   schema: {
                     $ref: '#/components/schemas/Error'
+                  }
+                }
+              }
+            },
+            '500': {
+              description: 'サーバーエラー',
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/Error'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/erd': {
+        get: {
+          tags: ['Documentation'],
+          summary: 'ER図を取得',
+          description: 'PrismaスキーマからER図を生成してSVG形式で返します',
+          responses: {
+            '200': {
+              description: 'ER図の取得に成功',
+              content: {
+                'image/svg+xml': {
+                  schema: {
+                    type: 'string'
                   }
                 }
               }

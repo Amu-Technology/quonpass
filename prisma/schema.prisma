@@ -2,6 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../public/erd.svg"
+  include  = ["*"]
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

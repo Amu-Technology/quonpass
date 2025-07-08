@@ -10,7 +10,9 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "docs:generate": "redocly build-docs swagger.config.js -o public/api-docs.html",
-    "docs:serve": "redocly serve swagger.config.js"
+    "docs:serve": "redocly serve swagger.config.js",
+    "erd:generate": "prisma generate",
+    "erd:view": "open public/erd.svg"
   },
   "prisma": {
     "seed": "node --loader ts-node/esm prisma/seed.ts"
@@ -44,6 +46,7 @@
     "next": "^15.3.3",
     "next-auth": "^5.0.0-beta.27",
     "next-themes": "^0.4.6",
+    "prisma-erd-generator": "^2.0.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.3",

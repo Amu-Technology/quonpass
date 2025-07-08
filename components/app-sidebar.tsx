@@ -14,6 +14,7 @@ import {
   IconTarget,
   IconCashRegister,
   IconTruckDelivery,
+  IconDatabase,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -74,6 +75,11 @@ const navMain = [
     title: "ユーザー管理",
     url: "/",
     icon: IconUsers,
+  },
+  {
+    title: "ER図",
+    url: "/erd",
+    icon: IconDatabase,
   },
 ];
 
