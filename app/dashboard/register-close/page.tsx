@@ -93,6 +93,119 @@ export default function RegisterClosePage() {
   const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
 
+  const fetchComparisonData = useCallback(async (currentStartDate: string, currentEndDate: string, storeId: string) => {
+    try {
+      // 日付の妥当性チェック
+      if (!currentStartDate || !currentEndDate) {
+        console.log('日付が設定されていないため、比較データの取得をスキップします');
+        return;
+      }
+
+      const currentStart = new Date(currentStartDate);
+      const currentEnd = new Date(currentEndDate);
+      
+      // 日付が有効かチェック
+      if (isNaN(currentStart.getTime()) || isNaN(currentEnd.getTime())) {
+        console.log('無効な日付形式のため、比較データの取得をスキップします');
+        return;
+      }
+      
+      let previousStart: Date;
+      let previousEnd: Date;
+
+      switch (periodType) {
+        case 'year':
+          previousStart = subYears(currentStart, 1);
+          previousEnd = subYears(currentEnd, 1);
+          break;
+        case 'month':
+          previousStart = subMonths(currentStart, 1);
+          previousEnd = subMonths(currentEnd, 1);
+          break;
+        case 'week':
+          previousStart = subWeeks(currentStart, 1);
+          previousEnd = subWeeks(currentEnd, 1);
+          break;
+        default:
+          console.log('無効な期間タイプのため、比較データの取得をスキップします');
+          return;
+      }
+
+      const params = new URLSearchParams();
+      params.append('startDate', format(previousStart, 'yyyy-MM-dd'));
+      params.append('endDate', format(previousEnd, 'yyyy-MM-dd'));
+      if (storeId && storeId !== 'all') params.append('storeId', storeId);
+
+      const response = await fetch(`/api/register-closes?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch comparison data');
+      }
+      const previousData = await response.json();
+
+      // 現在のデータと前期間のデータを比較
+      const currentSummary = calculateSummary(registerCloses);
+      const previousSummary = calculateSummary(previousData);
+
+      if (currentSummary && previousSummary) {
+        const comparison: ComparisonData = {
+          current: currentSummary,
+          previous: previousSummary,
+          difference: {
+            totalCustomers: currentSummary.totalCustomers - previousSummary.totalCustomers,
+            totalSales: currentSummary.totalSales - previousSummary.totalSales,
+            totalNetSales: currentSummary.totalNetSales - previousSummary.totalNetSales,
+            totalCash: currentSummary.totalCash - previousSummary.totalCash,
+            totalCredit: currentSummary.totalCredit - previousSummary.totalCredit,
+            totalPoint: currentSummary.totalPoint - previousSummary.totalPoint,
+            totalElectronicMoney: currentSummary.totalElectronicMoney - previousSummary.totalElectronicMoney,
+            averageCustomerUnitPrice: currentSummary.averageCustomerUnitPrice - previousSummary.averageCustomerUnitPrice,
+          },
+          percentage: {
+            totalCustomers: previousSummary.totalCustomers > 0 ? ((currentSummary.totalCustomers - previousSummary.totalCustomers) / previousSummary.totalCustomers) * 100 : 0,
+            totalSales: previousSummary.totalSales > 0 ? ((currentSummary.totalSales - previousSummary.totalSales) / previousSummary.totalSales) * 100 : 0,
+            totalNetSales: previousSummary.totalNetSales > 0 ? ((currentSummary.totalNetSales - previousSummary.totalNetSales) / previousSummary.totalNetSales) * 100 : 0,
+            totalCash: previousSummary.totalCash > 0 ? ((currentSummary.totalCash - previousSummary.totalCash) / previousSummary.totalCash) * 100 : 0,
+            totalCredit: previousSummary.totalCredit > 0 ? ((currentSummary.totalCredit - previousSummary.totalCredit) / previousSummary.totalCredit) * 100 : 0,
+            totalPoint: previousSummary.totalPoint > 0 ? ((currentSummary.totalPoint - previousSummary.totalPoint) / previousSummary.totalPoint) * 100 : 0,
+            totalElectronicMoney: previousSummary.totalElectronicMoney > 0 ? ((currentSummary.totalElectronicMoney - previousSummary.totalElectronicMoney) / previousSummary.totalElectronicMoney) * 100 : 0,
+            averageCustomerUnitPrice: previousSummary.averageCustomerUnitPrice > 0 ? ((currentSummary.averageCustomerUnitPrice - previousSummary.averageCustomerUnitPrice) / previousSummary.averageCustomerUnitPrice) * 100 : 0,
+          },
+        };
+        setComparisonData(comparison);
+      }
+    } catch (error) {
+      console.error('Error fetching comparison data:', error);
+    }
+  }, [periodType, registerCloses]);
+
+  // サマリー計算
+  const calculateSummary = (data: RegisterClose[]) => {
+    if (data.length === 0) return null;
+
+    const summary = data.reduce((acc, record) => {
+      acc.totalCustomers += record.customer_count;
+      acc.totalSales += Number(record.total_sales);
+      acc.totalNetSales += Number(record.net_sales);
+      acc.totalCash += Number(record.cash_amount);
+      acc.totalCredit += Number(record.credit_amount);
+      acc.totalPoint += Number(record.point_amount);
+      acc.totalElectronicMoney += Number(record.electronic_money_amount);
+      return acc;
+    }, {
+      totalCustomers: 0,
+      totalSales: 0,
+      totalNetSales: 0,
+      totalCash: 0,
+      totalCredit: 0,
+      totalPoint: 0,
+      totalElectronicMoney: 0,
+    });
+
+    return {
+      ...summary,
+      averageCustomerUnitPrice: summary.totalCustomers > 0 ? summary.totalSales / summary.totalCustomers : 0,
+    };
+  };
 
   const fetchRegisterCloses = useCallback(async () => {
     setLoading(true);
@@ -109,8 +222,10 @@ export default function RegisterClosePage() {
       const data = await response.json();
       setRegisterCloses(data);
 
-      // 比較データを取得
-      await fetchComparisonData(startDate, endDate, selectedStoreId);
+      // 日付が設定されている場合のみ比較データを取得
+      if (startDate && endDate) {
+        await fetchComparisonData(startDate, endDate, selectedStoreId);
+      }
       
       toast.success('レジクローズデータを更新しました。');
     } catch (error) {
@@ -119,7 +234,7 @@ export default function RegisterClosePage() {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, selectedStoreId]);
+  }, [startDate, endDate, selectedStoreId, fetchComparisonData]);
 
   useEffect(() => {
     fetchRegisterCloses();
@@ -178,106 +293,6 @@ export default function RegisterClosePage() {
     }
   };
 
-  // 比較データの取得
-  const fetchComparisonData = async (currentStartDate: string, currentEndDate: string, storeId: string) => {
-    try {
-      const currentStart = new Date(currentStartDate);
-      const currentEnd = new Date(currentEndDate);
-      
-      let previousStart: Date;
-      let previousEnd: Date;
-
-      switch (periodType) {
-        case 'year':
-          previousStart = subYears(currentStart, 1);
-          previousEnd = subYears(currentEnd, 1);
-          break;
-        case 'month':
-          previousStart = subMonths(currentStart, 1);
-          previousEnd = subMonths(currentEnd, 1);
-          break;
-        case 'week':
-          previousStart = subWeeks(currentStart, 1);
-          previousEnd = subWeeks(currentEnd, 1);
-          break;
-      }
-
-      const params = new URLSearchParams();
-      params.append('startDate', format(previousStart, 'yyyy-MM-dd'));
-      params.append('endDate', format(previousEnd, 'yyyy-MM-dd'));
-      if (storeId && storeId !== 'all') params.append('storeId', storeId);
-
-      const response = await fetch(`/api/register-closes?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch comparison data');
-      }
-      const previousData = await response.json();
-
-      // 現在のデータと前期間のデータを比較
-      const currentSummary = calculateSummary(registerCloses);
-      const previousSummary = calculateSummary(previousData);
-
-      if (currentSummary && previousSummary) {
-        const comparison: ComparisonData = {
-          current: currentSummary,
-          previous: previousSummary,
-          difference: {
-            totalCustomers: currentSummary.totalCustomers - previousSummary.totalCustomers,
-            totalSales: currentSummary.totalSales - previousSummary.totalSales,
-            totalNetSales: currentSummary.totalNetSales - previousSummary.totalNetSales,
-            totalCash: currentSummary.totalCash - previousSummary.totalCash,
-            totalCredit: currentSummary.totalCredit - previousSummary.totalCredit,
-            totalPoint: currentSummary.totalPoint - previousSummary.totalPoint,
-            totalElectronicMoney: currentSummary.totalElectronicMoney - previousSummary.totalElectronicMoney,
-            averageCustomerUnitPrice: currentSummary.averageCustomerUnitPrice - previousSummary.averageCustomerUnitPrice,
-          },
-          percentage: {
-            totalCustomers: previousSummary.totalCustomers > 0 ? ((currentSummary.totalCustomers - previousSummary.totalCustomers) / previousSummary.totalCustomers) * 100 : 0,
-            totalSales: previousSummary.totalSales > 0 ? ((currentSummary.totalSales - previousSummary.totalSales) / previousSummary.totalSales) * 100 : 0,
-            totalNetSales: previousSummary.totalNetSales > 0 ? ((currentSummary.totalNetSales - previousSummary.totalNetSales) / previousSummary.totalNetSales) * 100 : 0,
-            totalCash: previousSummary.totalCash > 0 ? ((currentSummary.totalCash - previousSummary.totalCash) / previousSummary.totalCash) * 100 : 0,
-            totalCredit: previousSummary.totalCredit > 0 ? ((currentSummary.totalCredit - previousSummary.totalCredit) / previousSummary.totalCredit) * 100 : 0,
-            totalPoint: previousSummary.totalPoint > 0 ? ((currentSummary.totalPoint - previousSummary.totalPoint) / previousSummary.totalPoint) * 100 : 0,
-            totalElectronicMoney: previousSummary.totalElectronicMoney > 0 ? ((currentSummary.totalElectronicMoney - previousSummary.totalElectronicMoney) / previousSummary.totalElectronicMoney) * 100 : 0,
-            averageCustomerUnitPrice: previousSummary.averageCustomerUnitPrice > 0 ? ((currentSummary.averageCustomerUnitPrice - previousSummary.averageCustomerUnitPrice) / previousSummary.averageCustomerUnitPrice) * 100 : 0,
-          },
-        };
-        setComparisonData(comparison);
-      }
-    } catch (error) {
-      console.error('Error fetching comparison data:', error);
-    }
-  };
-
-  // サマリー計算
-  const calculateSummary = (data: RegisterClose[]) => {
-    if (data.length === 0) return null;
-
-    const summary = data.reduce((acc, record) => {
-      acc.totalCustomers += record.customer_count;
-      acc.totalSales += Number(record.total_sales);
-      acc.totalNetSales += Number(record.net_sales);
-      acc.totalCash += Number(record.cash_amount);
-      acc.totalCredit += Number(record.credit_amount);
-      acc.totalPoint += Number(record.point_amount);
-      acc.totalElectronicMoney += Number(record.electronic_money_amount);
-      return acc;
-    }, {
-      totalCustomers: 0,
-      totalSales: 0,
-      totalNetSales: 0,
-      totalCash: 0,
-      totalCredit: 0,
-      totalPoint: 0,
-      totalElectronicMoney: 0,
-    });
-
-    return {
-      ...summary,
-      averageCustomerUnitPrice: summary.totalCustomers > 0 ? summary.totalSales / summary.totalCustomers : 0,
-    };
-  };
-
   const summary = calculateSummary(registerCloses);
 
   const getPeriodLabel = () => {
@@ -302,8 +317,6 @@ export default function RegisterClosePage() {
   };
 
   const filteredRegisterCloses = registerCloses;
-
-
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("ja-JP");
