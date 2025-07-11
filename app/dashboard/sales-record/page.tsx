@@ -1,5 +1,3 @@
-// app/dashboard/sales-record/page.tsx
-
 'use client'; // Client Component としてマーク
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,10 +12,11 @@ import { IconUpload, IconSearch } from "@tabler/icons-react"
 
 interface SalesRecord {
   id: number;
-  date: string; // ISO 8601形式の文字列
+  date: string;                   // ISO 8601形式の文字列
   quantity: number;
-  unit_price: number | string; // Decimal型は文字列として返される可能性がある
-  sales_amount: number | string; // Decimal型は文字列として返される可能性がある
+  unit_price: number | string;    // Decimal型は文字列として返される可能性がある
+  sales_amount: number | string;  // Decimal型は文字列として返される可能性がある
+  store_id: number;
   customer_attribute?: string;
   store: {
     name: string;

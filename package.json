@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate || true",
     "docs:generate": "redocly build-docs swagger.config.js -o public/api-docs.html",
     "docs:serve": "redocly serve swagger.config.js",
     "erd:generate": "prisma generate",
