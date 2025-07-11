@@ -38,7 +38,7 @@ const navMain = [
   },
   {
     title: "売上目標",
-    url: "/sales-target",
+    url: "/dashboard/targets",
     icon: IconTarget,
   },
   {
