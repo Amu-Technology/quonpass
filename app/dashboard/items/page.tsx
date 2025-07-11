@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,12 +71,7 @@ export default function ItemsPage() {
     price: 0,
   });
 
-  // データ取得
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       const response = await fetch("/api/items");
       if (response.ok) {
@@ -93,7 +88,12 @@ export default function ItemsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  // データ取得
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   // 商品フィルタリング
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function ItemsPage() {
     // 検索語でフィルタリング
     if (searchTerm) {
       filtered = filtered.filter((item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()),
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -256,7 +256,7 @@ export default function ItemsPage() {
 
   // CSVファイルアップロード
   const handleCsvUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -283,7 +283,7 @@ export default function ItemsPage() {
       } else {
         const errorData = await response.json();
         throw new Error(
-          errorData.error || "CSVファイルのアップロードに失敗しました",
+          errorData.error || "CSVファイルのアップロードに失敗しました"
         );
       }
     } catch (error) {

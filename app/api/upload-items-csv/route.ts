@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     if (!file) {
       return NextResponse.json(
         { error: "ファイルがアップロードされていません" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -159,7 +159,7 @@ export async function POST(request: Request) {
           message: errorMessage,
         });
         console.error(
-          `Error processing row: ${JSON.stringify(record)} - ${errorMessage}`,
+          `Error processing row: ${JSON.stringify(record)} - ${errorMessage}`
         );
       }
     }
@@ -170,7 +170,7 @@ export async function POST(request: Request) {
           message: `${importedCount} 件の商品をインポートしました。${errorCount} 件のエラーがありました。`,
           errors: errors,
         },
-        { status: 200 },
+        { status: 200 }
       );
     } else {
       return NextResponse.json({
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
         error: "CSVのアップロードと処理に失敗しました。",
         details: error instanceof Error ? error.message : "不明なエラー",
       },
-      { status: 500 },
+      { status: 500 }
     );
   } finally {
     await prisma.$disconnect();
