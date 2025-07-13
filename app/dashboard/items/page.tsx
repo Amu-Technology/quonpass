@@ -27,7 +27,7 @@ interface Item {
   type: "食材" | "商品" | "資材" | "特殊";
   name: string;
   unit: string;
-  minimum_order_quantity: string;
+  minimum_order_quantity: string | null;
   price: number;
 }
 
@@ -35,7 +35,7 @@ interface CreateItemRequest {
   type: "食材" | "商品" | "資材" | "特殊";
   name: string;
   unit: string;
-  minimum_order_quantity: string;
+  minimum_order_quantity: string | null;
   price: number;
 }
 
@@ -43,7 +43,7 @@ interface UpdateItemRequest {
   type?: "食材" | "商品" | "資材" | "特殊";
   name?: string;
   unit?: string;
-  minimum_order_quantity?: string;
+  minimum_order_quantity?: string | null;
   price?: number;
 }
 
@@ -56,18 +56,21 @@ export default function ItemsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [csvErrors, setCsvErrors] = useState<{ row: unknown; message: string }[]>([]);
+  const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false);
   const { toast, toasts, dismiss } = useToast();
 
   // フィルター状態
   const [selectedType, setSelectedType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [itemIdFilter, setItemIdFilter] = useState<string>("");
 
   // フォーム状態
   const [formData, setFormData] = useState<CreateItemRequest>({
     type: "商品",
     name: "",
     unit: "個",
-    minimum_order_quantity: "1",
+    minimum_order_quantity: null,
     price: 0,
   });
 
@@ -111,8 +114,15 @@ export default function ItemsPage() {
       );
     }
 
+    // 商品番号でフィルタリング
+    if (itemIdFilter) {
+      filtered = filtered.filter((item) =>
+        item.id.toString().includes(itemIdFilter)
+      );
+    }
+
     setFilteredItems(filtered);
-  }, [items, selectedType, searchTerm]);
+  }, [items, selectedType, searchTerm, itemIdFilter]);
 
   // 商品作成
   const createItem = async () => {
@@ -137,7 +147,7 @@ export default function ItemsPage() {
           type: "商品",
           name: "",
           unit: "個",
-          minimum_order_quantity: "1",
+          minimum_order_quantity: null,
           price: 0,
         });
         fetchItems();
@@ -272,28 +282,55 @@ export default function ItemsPage() {
         body: formData,
       });
 
+      const result = await response.json();
+
       if (response.ok) {
-        const result = await response.json();
+        // 成功メッセージを表示
         toast({
           title: "成功",
-          description:
-            result.message || "CSVファイルが正常にアップロードされました",
+          description: result.message || "CSVファイルが正常にアップロードされました",
         });
+
+        // エラーがある場合は警告として表示
+        if (result.errors && result.errors.length > 0) {
+          setCsvErrors(result.errors);
+          setIsErrorDialogOpen(true);
+          
+          toast({
+            title: "警告",
+            description: `${result.errors.length}件のエラーが発生しました。詳細を確認してください。`,
+            variant: "destructive",
+          });
+          
+          // エラーの詳細をコンソールに出力
+          console.group("CSVアップロードエラー詳細");
+          result.errors.forEach((error: { row: unknown; message: string }, index: number) => {
+            console.error(`エラー ${index + 1}:`, {
+              row: error.row,
+              message: error.message
+            });
+          });
+          console.groupEnd();
+        }
+
         fetchItems();
       } else {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || "CSVファイルのアップロードに失敗しました"
-        );
+        // エラーレスポンスの場合
+        const errorMessage = result.error || result.details || "CSVファイルのアップロードに失敗しました";
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("CSVファイルのアップロードに失敗しました:", error);
+      
+      // エラーメッセージを詳細に表示
+      let errorMessage = "CSVファイルのアップロードに失敗しました";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "エラー",
-        description:
-          error instanceof Error
-            ? error.message
-            : "CSVファイルのアップロードに失敗しました",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -371,9 +408,58 @@ export default function ItemsPage() {
                 {isUploading ? "アップロード中..." : "CSVアップロード"}
               </Button>
             </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const csvTemplate = `種別,商品番号,食材名,単位,最低ロット,卸価格（税抜）
+食材,,トマト,個,10,150
+商品,,パン,袋,5,200
+資材,,包装紙,枚,,50
+特殊,,ラベル,枚,500,10`;
+                const blob = new Blob([csvTemplate], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'items_template.csv';
+                a.click();
+                window.URL.revokeObjectURL(url);
+              }}
+            >
+              CSVテンプレート
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* CSVヘルプ */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>CSVインポートについて</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-2">CSVファイル形式</h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p><strong>種別:</strong> 食材、商品、資材、特殊のいずれか</p>
+                <p><strong>商品番号:</strong> 既存商品を更新する場合は番号を指定、新規作成の場合は空欄</p>
+                <p><strong>食材名:</strong> 商品の名前（必須）</p>
+                <p><strong>単位:</strong> g、kg（㎏も自動変換）、袋、本、枚、巻、個、冊、式、束、台、箱、粒、ケース、セット、バルク、ロット、缶、BT、樽、ｹｰｽ、着、なし（-は自動変換）のいずれか</p>
+                <p><strong>最低ロット:</strong> 最低発注数量（空欄可）</p>
+                <p><strong>卸価格（税抜）:</strong> 商品の卸価格（税抜）（円、小数点2桁まで対応）</p>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">処理ルール</h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p>• 商品番号が指定されている場合：その番号で商品を更新または作成</p>
+                <p>• 商品番号が空欄の場合：食材名で既存商品を検索し、見つかれば更新、見つからなければ新規作成</p>
+                <p>• 既存商品の更新時は、指定されたデータで上書きされます</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* フィルター */}
       <Card className="mb-6">
@@ -381,7 +467,7 @@ export default function ItemsPage() {
           <CardTitle>フィルター</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="type">商品タイプ</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
@@ -404,6 +490,15 @@ export default function ItemsPage() {
                 placeholder="商品名を入力..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="itemId">商品番号</Label>
+              <Input
+                id="itemId"
+                placeholder="商品番号を入力..."
+                value={itemIdFilter}
+                onChange={(e) => setItemIdFilter(e.target.value)}
               />
             </div>
           </div>
@@ -436,9 +531,10 @@ export default function ItemsPage() {
                         </Badge>
                       </div>
                       <div className="text-sm text-gray-600 space-y-1">
-                        <div>単価: ¥{item.price.toLocaleString()}</div>
+                        <div>商品番号: {item.id}</div>
+                        <div>卸価格（税抜）: ¥{item.price.toLocaleString('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                         <div>単位: {item.unit}</div>
-                        <div>最低ロット: {item.minimum_order_quantity}</div>
+                        <div>最低ロット: {item.minimum_order_quantity || "設定なし"}</div>
                       </div>
                     </div>
                   </div>
@@ -531,6 +627,11 @@ export default function ItemsPage() {
                   <SelectItem value="セット">セット</SelectItem>
                   <SelectItem value="バルク">バルク</SelectItem>
                   <SelectItem value="ロット">ロット</SelectItem>
+                  <SelectItem value="BT">BT</SelectItem>
+                  <SelectItem value="樽">樽</SelectItem>
+                  <SelectItem value="ｹｰｽ">ｹｰｽ</SelectItem>
+                  <SelectItem value="着">着</SelectItem>
+                  <SelectItem value="なし">なし</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -538,14 +639,14 @@ export default function ItemsPage() {
               <Label htmlFor="minimum_order_quantity">最低ロット</Label>
               <Input
                 id="minimum_order_quantity"
-                value={formData.minimum_order_quantity}
+                value={formData.minimum_order_quantity || ""}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    minimum_order_quantity: e.target.value,
+                    minimum_order_quantity: e.target.value || null,
                   }))
                 }
-                placeholder="最低ロットを入力"
+                placeholder="最低ロットを入力（空欄可）"
               />
             </div>
             <div>
@@ -553,6 +654,8 @@ export default function ItemsPage() {
               <Input
                 id="price"
                 type="number"
+                step="0.01"
+                min="0"
                 value={formData.price}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -560,7 +663,7 @@ export default function ItemsPage() {
                     price: parseFloat(e.target.value) || 0,
                   }))
                 }
-                placeholder="単価を入力"
+                placeholder="単価を入力（例: 150.50）"
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -647,6 +750,12 @@ export default function ItemsPage() {
                   <SelectItem value="セット">セット</SelectItem>
                   <SelectItem value="バルク">バルク</SelectItem>
                   <SelectItem value="ロット">ロット</SelectItem>
+                  <SelectItem value="缶">缶</SelectItem>
+                  <SelectItem value="BT">BT</SelectItem>
+                  <SelectItem value="樽">樽</SelectItem>
+                  <SelectItem value="ｹｰｽ">ｹｰｽ</SelectItem>
+                  <SelectItem value="着">着</SelectItem>
+                  <SelectItem value="なし">なし</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -654,14 +763,14 @@ export default function ItemsPage() {
               <Label htmlFor="edit-minimum_order_quantity">最低ロット</Label>
               <Input
                 id="edit-minimum_order_quantity"
-                value={formData.minimum_order_quantity}
+                value={formData.minimum_order_quantity || ""}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    minimum_order_quantity: e.target.value,
+                    minimum_order_quantity: e.target.value || null,
                   }))
                 }
-                placeholder="最低ロットを入力"
+                placeholder="最低ロットを入力（空欄可）"
               />
             </div>
             <div>
@@ -669,6 +778,8 @@ export default function ItemsPage() {
               <Input
                 id="edit-price"
                 type="number"
+                step="0.01"
+                min="0"
                 value={formData.price}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -676,7 +787,7 @@ export default function ItemsPage() {
                     price: parseFloat(e.target.value) || 0,
                   }))
                 }
-                placeholder="単価を入力"
+                placeholder="単価を入力（例: 150.50）"
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -691,6 +802,54 @@ export default function ItemsPage() {
                 disabled={isSubmitting || !formData.name || formData.price <= 0}
               >
                 {isSubmitting ? "更新中..." : "更新"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSVエラー詳細ダイアログ */}
+      <Dialog open={isErrorDialogOpen} onOpenChange={setIsErrorDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>CSVアップロードエラー詳細</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600">
+              {csvErrors.length}件のエラーが発生しました。以下の詳細を確認してください。
+            </div>
+            <div className="max-h-96 overflow-y-auto border rounded-lg">
+              <div className="divide-y">
+                {csvErrors.map((error, index) => (
+                  <div key={index} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-red-600 mb-2">
+                          エラー {index + 1}
+                        </div>
+                        <div className="text-sm text-gray-700 mb-2 break-words">
+                          {error.message}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          <strong>データ:</strong>
+                          <div className="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto">
+                            <pre className="whitespace-pre-wrap break-words">
+                              {JSON.stringify(error.row, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsErrorDialogOpen(false)}
+              >
+                閉じる
               </Button>
             </div>
           </div>

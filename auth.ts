@@ -11,10 +11,21 @@ export const { handlers, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET!,
   pages: {
     signIn: "/auth/signin",
+    signOut: "/",
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
       console.log("[Auth] Redirect callback:", { url, baseUrl })
+      
+      // サインアウト後のリダイレクト
+      if (url.includes("signout") || url.includes("signOut")) {
+        return `${baseUrl}/`
+      }
+      
+      // 認証成功後のリダイレクト
+      if (url.includes("signin") || url.includes("signIn")) {
+        return `${baseUrl}/dashboard`
+      }
       
       // 相対パスの場合はbaseUrlを追加
       if (url.startsWith("/")) {

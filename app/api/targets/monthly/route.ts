@@ -73,7 +73,22 @@ export async function GET(request: Request) {
       ],
     });
 
-    return NextResponse.json(monthlyTargets);
+    // Decimal型をnumber型に変換
+    const serializedTargets = monthlyTargets.map(target => ({
+      ...target,
+      allocation_percentage: Number(target.allocation_percentage),
+      target_sales_amount: Number(target.target_sales_amount),
+      weekly_targets: target.weekly_targets.map(weekly => ({
+        ...weekly,
+        target_sales_amount: Number(weekly.target_sales_amount),
+        daily_targets: weekly.daily_targets.map(daily => ({
+          ...daily,
+          target_sales_amount: Number(daily.target_sales_amount),
+        })),
+      })),
+    }));
+
+    return NextResponse.json(serializedTargets);
   } catch (error) {
     console.error('月間目標の取得に失敗しました:', error);
     return NextResponse.json(
@@ -111,11 +126,14 @@ export async function GET(request: Request) {
  *         description: サーバーエラー
  */
 export async function POST(request: Request) {
+  let body;
   try {
-    const body = await request.json();
+    body = await request.json();
+    console.log('月間目標作成API - リクエストボディ:', body);
     
     // 月間目標のバリデーション
     const validatedData = MonthlyTargetSchema.parse(body);
+    console.log('月間目標作成API - バリデーション成功:', validatedData);
     
     // 既存の月間目標をチェック
     const existingTarget = await prisma.monthlyTarget.findUnique({
@@ -139,8 +157,8 @@ export async function POST(request: Request) {
       data: {
         annual_target_id: validatedData.annual_target_id,
         month: validatedData.month,
-        allocation_percentage: validatedData.allocation_percentage,
-        target_sales_amount: validatedData.target_sales_amount,
+        allocation_percentage: new Prisma.Decimal(validatedData.allocation_percentage),
+        target_sales_amount: new Prisma.Decimal(validatedData.target_sales_amount),
         target_customer_count: validatedData.target_customer_count,
         target_total_items_sold: validatedData.target_total_items_sold,
       },
@@ -157,9 +175,17 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(monthlyTarget, { status: 201 });
+    // Decimal型をnumber型に変換
+    const serializedTarget = {
+      ...monthlyTarget,
+      allocation_percentage: Number(monthlyTarget.allocation_percentage),
+      target_sales_amount: Number(monthlyTarget.target_sales_amount),
+    };
+
+    return NextResponse.json(serializedTarget, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('月間目標のバリデーションエラー:', error.errors);
       return NextResponse.json(
         { error: 'バリデーションエラー', details: error.errors },
         { status: 400 }
@@ -167,8 +193,9 @@ export async function POST(request: Request) {
     }
     
     console.error('月間目標の作成に失敗しました:', error);
+    console.error('リクエストボディ:', body);
     return NextResponse.json(
-      { error: '月間目標の作成に失敗しました' },
+      { error: '月間目標の作成に失敗しました', details: error instanceof Error ? error.message : '不明なエラー' },
       { status: 500 }
     );
   } finally {

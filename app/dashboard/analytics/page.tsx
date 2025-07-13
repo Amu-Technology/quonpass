@@ -227,22 +227,22 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="container mx-10 py-10 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">売上分析</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">売上分析</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             売上実績とレジクローズデータから詳細な分析データを確認できます
           </p>
         </div>
       </div>
 
       {/* フィルター */}
-      <div className="flex gap-4 items-center">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">期間:</span>
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-24 sm:w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
           >
             <IconChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium min-w-[120px] text-center">
+          <span className="text-sm font-medium min-w-[100px] sm:min-w-[120px] text-center">
             {getCurrentPeriodLabel()}
           </span>
           <Button
@@ -279,7 +279,7 @@ export default function AnalyticsPage() {
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">店舗:</span>
           <Select value={selectedStore} onValueChange={setSelectedStore}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-32 sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -295,14 +295,14 @@ export default function AnalyticsPage() {
       </div>
 
       {/* 主要指標 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">総客数</CardTitle>
             <IconUsers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {analyticsData?.totalCustomers || 0}人
             </div>
             {analyticsData?.comparisonDetail && (
@@ -327,7 +327,7 @@ export default function AnalyticsPage() {
             <IconCurrencyYen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {formatCurrency(analyticsData?.averageCustomerValue || 0)}
             </div>
             {analyticsData?.comparisonDetail && (
@@ -349,7 +349,7 @@ export default function AnalyticsPage() {
             <IconTrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {formatCurrency(analyticsData?.totalSales || 0)}
             </div>
             {analyticsData?.comparisonDetail && (
@@ -371,7 +371,7 @@ export default function AnalyticsPage() {
             <IconChartBar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {analyticsData?.purchaseRate || 100}%
             </div>
           </CardContent>
@@ -380,14 +380,14 @@ export default function AnalyticsPage() {
 
       {/* レジクローズ詳細分析 */}
       {analyticsData?.registerCloseSummary && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">男性客数</CardTitle>
               <IconGenderMale className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">
                 {analyticsData.registerCloseSummary.maleCount}人
               </div>
             </CardContent>
@@ -399,7 +399,7 @@ export default function AnalyticsPage() {
               <IconGenderFemale className="h-4 w-4 text-pink-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-pink-600">
+              <div className="text-xl sm:text-2xl font-bold text-pink-600">
                 {analyticsData.registerCloseSummary.femaleCount}人
               </div>
             </CardContent>
@@ -411,7 +411,7 @@ export default function AnalyticsPage() {
               <IconCash className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">
                 {formatCurrency(analyticsData.registerCloseSummary.paymentMethods.cash)}
               </div>
             </CardContent>
@@ -423,7 +423,7 @@ export default function AnalyticsPage() {
               <IconCreditCard className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
+              <div className="text-xl sm:text-2xl font-bold text-purple-600">
                 {formatCurrency(analyticsData.registerCloseSummary.paymentMethods.credit)}
               </div>
             </CardContent>
@@ -433,11 +433,11 @@ export default function AnalyticsPage() {
 
       {/* 詳細分析 */}
       <Tabs defaultValue="products" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="products">商品構成比</TabsTrigger>
-          <TabsTrigger value="categories">カテゴリ別売上</TabsTrigger>
-          <TabsTrigger value="daily">日別売上推移</TabsTrigger>
-          <TabsTrigger value="payment">支払い方法分析</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="products" className="text-xs sm:text-sm">商品構成比</TabsTrigger>
+          <TabsTrigger value="categories" className="text-xs sm:text-sm">カテゴリ別売上</TabsTrigger>
+          <TabsTrigger value="daily" className="text-xs sm:text-sm">日別売上推移</TabsTrigger>
+          <TabsTrigger value="payment" className="text-xs sm:text-sm">支払い方法分析</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products" className="space-y-4">
@@ -450,7 +450,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               {/* 棒グラフ表示 */}
-              <div className="h-80 mb-6">
+              <div className="h-64 sm:h-80 mb-6">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analyticsData?.productComposition || []}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -511,7 +511,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               {/* 棒グラフ表示 */}
-              <div className="h-80 mb-6">
+              <div className="h-64 sm:h-80 mb-6">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analyticsData?.categorySales || []}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -572,7 +572,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               {/* グラフ表示 */}
-              <div className="h-80 mb-6">
+              <div className="h-64 sm:h-80 mb-6">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analyticsData?.dailySales || []}>
                     <CartesianGrid strokeDasharray="3 3" />

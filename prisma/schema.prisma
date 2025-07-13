@@ -148,7 +148,7 @@ model item {
   type                   orderItemType
   name                   String
   unit                   unit
-  minimum_order_quantity String
+  minimum_order_quantity String?
   price                  Decimal       @db.Decimal(10, 2)
   orderItem              orderItem[]
   recipeItems            recipeItem[]
@@ -391,6 +391,12 @@ enum unit {
   セット
   バルク
   ロット
+  缶
+  BT
+  樽
+  ｹｰｽ
+  着
+  なし
 }
 
 enum orderItemType {

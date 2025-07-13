@@ -179,6 +179,9 @@ export async function GET(request: Request) {
     const storeFilter = storeId ? { store_id: parseInt(storeId) } : {}
 
     // 売上データの取得
+    console.log('Analytics API - 日付フィルタ:', dateFilter);
+    console.log('Analytics API - 店舗フィルタ:', storeFilter);
+    
     const salesData = await prisma.salesRecord.findMany({
       where: {
         ...dateFilter,
@@ -196,6 +199,8 @@ export async function GET(request: Request) {
         date: 'asc'
       }
     })
+    
+    console.log('Analytics API - 売上データ件数:', salesData.length);
 
     // レジクローズデータの取得
     const registerCloseData = await prisma.registerClose.findMany({
@@ -210,6 +215,8 @@ export async function GET(request: Request) {
         date: 'asc'
       }
     })
+    
+    console.log('Analytics API - レジクローズデータ件数:', registerCloseData.length);
 
     // 商品データの取得
     const productsData = await prisma.products.findMany({
@@ -319,6 +326,12 @@ export async function GET(request: Request) {
 
     // --- 分析データの計算 ---
     const analysis = calculateAnalytics(salesData, registerCloseData, productsData, categoriesData, prevSalesData, prevRegisterCloseData)
+    
+    console.log('Analytics API - 分析結果:', {
+      totalCustomers: analysis.totalCustomers,
+      totalSales: analysis.totalSales,
+      averageCustomerValue: analysis.averageCustomerValue
+    });
 
     return NextResponse.json(analysis)
   } catch (error) {

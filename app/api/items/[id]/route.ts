@@ -9,7 +9,7 @@ const updateItemSchema = z.object({
   type: z.enum(['食材', '商品', '資材', '特殊']).optional(),
   name: z.string().min(1, '商品名は必須です').optional(),
   unit: z.enum(['g', 'kg', '袋', '本', '枚', '巻', '個', '冊', '式', '束', '台', '箱', '粒', 'ケース', 'セット', 'バルク', 'ロット']).optional(),
-  minimum_order_quantity: z.string().min(1, '最小発注数量は必須です').optional(),
+  minimum_order_quantity: z.string().optional().nullable(),
   price: z.number().positive('価格は正の数である必要があります').optional(),
 });
 
@@ -124,10 +124,11 @@ const updateItemSchema = z.object({
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id, 10);
+    const { id: idParam } = await params;
+    const id = parseInt(idParam, 10);
     
     if (isNaN(id)) {
       return NextResponse.json(
@@ -161,10 +162,11 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id, 10);
+    const { id: idParam } = await params;
+    const id = parseInt(idParam, 10);
     
     if (isNaN(id)) {
       return NextResponse.json(
@@ -221,10 +223,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id, 10);
+    const { id: idParam } = await params;
+    const id = parseInt(idParam, 10);
     
     if (isNaN(id)) {
       return NextResponse.json(

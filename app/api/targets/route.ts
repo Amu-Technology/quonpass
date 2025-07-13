@@ -83,7 +83,26 @@ export async function GET(request: Request) {
       ],
     });
 
-    return NextResponse.json(annualTargets);
+    // Decimal型をnumber型に変換
+    const serializedTargets = annualTargets.map(target => ({
+      ...target,
+      target_sales_amount: Number(target.target_sales_amount),
+      monthly_targets: target.monthly_targets.map(monthly => ({
+        ...monthly,
+        allocation_percentage: Number(monthly.allocation_percentage),
+        target_sales_amount: Number(monthly.target_sales_amount),
+        weekly_targets: monthly.weekly_targets.map(weekly => ({
+          ...weekly,
+          target_sales_amount: Number(weekly.target_sales_amount),
+          daily_targets: weekly.daily_targets.map(daily => ({
+            ...daily,
+            target_sales_amount: Number(daily.target_sales_amount),
+          })),
+        })),
+      })),
+    }));
+
+    return NextResponse.json(serializedTargets);
   } catch (error) {
     console.error('年間目標の取得に失敗しました:', error);
     return NextResponse.json(
@@ -149,7 +168,7 @@ export async function POST(request: Request) {
       data: {
         year: validatedData.year,
         store_id: validatedData.store_id,
-        target_sales_amount: validatedData.target_sales_amount,
+        target_sales_amount: new Prisma.Decimal(validatedData.target_sales_amount),
         target_customer_count: validatedData.target_customer_count,
         target_total_items_sold: validatedData.target_total_items_sold,
       },
@@ -162,7 +181,13 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(annualTarget, { status: 201 });
+    // Decimal型をnumber型に変換
+    const serializedTarget = {
+      ...annualTarget,
+      target_sales_amount: Number(annualTarget.target_sales_amount),
+    };
+
+    return NextResponse.json(serializedTarget, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

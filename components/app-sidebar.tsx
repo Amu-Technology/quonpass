@@ -111,7 +111,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <Link href="/">
                 <IconCompass className="!size-5" />
-                <span className="text-base font-semibold">Quonpass</span>
+                <span className="text-base font-semibold">QuonPass</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

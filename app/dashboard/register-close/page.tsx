@@ -93,7 +93,7 @@ export default function RegisterClosePage() {
   const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
 
-  const fetchComparisonData = useCallback(async (currentStartDate: string, currentEndDate: string, storeId: string) => {
+  const fetchComparisonData = useCallback(async (currentStartDate: string, currentEndDate: string, storeId: string, currentData: RegisterClose[]) => {
     try {
       // 日付の妥当性チェック
       if (!currentStartDate || !currentEndDate) {
@@ -143,7 +143,7 @@ export default function RegisterClosePage() {
       const previousData = await response.json();
 
       // 現在のデータと前期間のデータを比較
-      const currentSummary = calculateSummary(registerCloses);
+      const currentSummary = calculateSummary(currentData);
       const previousSummary = calculateSummary(previousData);
 
       if (currentSummary && previousSummary) {
@@ -176,7 +176,7 @@ export default function RegisterClosePage() {
     } catch (error) {
       console.error('Error fetching comparison data:', error);
     }
-  }, [periodType, registerCloses]);
+  }, [periodType]);
 
   // サマリー計算
   const calculateSummary = (data: RegisterClose[]) => {
@@ -224,7 +224,7 @@ export default function RegisterClosePage() {
 
       // 日付が設定されている場合のみ比較データを取得
       if (startDate && endDate) {
-        await fetchComparisonData(startDate, endDate, selectedStoreId);
+        await fetchComparisonData(startDate, endDate, selectedStoreId, data);
       }
       
       toast.success('レジクローズデータを更新しました。');
@@ -236,9 +236,11 @@ export default function RegisterClosePage() {
     }
   }, [startDate, endDate, selectedStoreId, fetchComparisonData]);
 
+  // 初期データ取得（初回のみ）
   useEffect(() => {
-    fetchRegisterCloses();
-  }, [fetchRegisterCloses]);
+    // 初期期間を設定（これにより自動的にデータが取得される）
+    setPeriodDates(periodType);
+  }, [periodType]); // periodTypeを依存配列に追加
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -368,7 +370,11 @@ export default function RegisterClosePage() {
   // 期間タイプが変更された時の処理
   useEffect(() => {
     setPeriodDates(periodType);
-  }, [periodType]);
+    // 期間が変更されたらデータを再取得
+    if (startDate && endDate) {
+      fetchRegisterCloses();
+    }
+  }, [periodType, startDate, endDate, selectedStoreId]);
 
   if (loading) {
     return <div className="p-4">読み込み中...</div>;

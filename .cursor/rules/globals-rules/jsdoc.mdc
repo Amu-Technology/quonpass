@@ -4,3 +4,5 @@ globs: "**/*.{ts}"
 alwaysApply: true
 ---
 - route.tsではJSDocを追加してください。
+- route.tsを変更した際は、/app/api-docsを変更するように。
+- dockerのコンテナ内に入ってから、prismaのコマンドを実行してください。
