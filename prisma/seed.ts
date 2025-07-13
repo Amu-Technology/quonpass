@@ -6,9 +6,9 @@ async function main() {
   // テスト店舗の作成
   const testStore = await prisma.stores.create({
     data: {
-      name: 'テスト店舗',
-      address: '東京都渋谷区テスト1-1-1',
-      phone: '03-1234-5678',
+      name: '株式会社　アポケアとやま　久遠チョコレート富山店',
+      address: '〒930-0916  富山県富山市向新庄町4-14-48 新庄ヒルズ',
+      phone: '076-451-8013',
       email: 'test@quonpass.com',
       status: status.active,
     },
@@ -18,7 +18,7 @@ async function main() {
   const testUser = await prisma.users.create({
     data: {
       name: 'テストユーザー',
-      email: 'test.user@quonpass.com',
+      email: 'shimada_hayato@amu-lab.com',
       role: role.store_manager,
       store_id: testStore.id,
     },

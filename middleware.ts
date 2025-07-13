@@ -10,6 +10,14 @@ export default auth(async (req) => {
                       req.nextUrl.pathname.startsWith("/public")
   const isDashboard = req.nextUrl.pathname.startsWith("/dashboard")
   const isHomePage = req.nextUrl.pathname === "/"
+  
+  // 認証不要な公開ページ
+  const isPublicPage = req.nextUrl.pathname === "/privacy" ||
+                      req.nextUrl.pathname === "/terms" ||
+                      req.nextUrl.pathname === "/cookies" ||
+                      req.nextUrl.pathname === "/erd" ||
+                      req.nextUrl.pathname === "/api-docs" ||
+                      req.nextUrl.pathname === "/api/docs"
 
   // APIルートと静的ファイルは常に許可
   if (isApiRoute || isStaticFile) {
@@ -22,6 +30,11 @@ export default auth(async (req) => {
       // 認証済みユーザーが認証ページにアクセスした場合はダッシュボードにリダイレクト
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl))
     }
+    return NextResponse.next()
+  }
+
+  // 公開ページは常に許可
+  if (isPublicPage) {
     return NextResponse.next()
   }
 
