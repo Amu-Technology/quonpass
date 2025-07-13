@@ -158,3 +158,39 @@ export async function POST(request: Request) {
     await prisma.$disconnect();
   }
 } 
+
+/**
+ * @swagger
+ * /api/items:
+ *   delete:
+ *     summary: 全アイテムを削除するAPI
+ *     description: itemsテーブルの全レコードを削除します
+ *     tags: [Items]
+ *     responses:
+ *       200:
+ *         description: 全件削除に成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: サーバーエラー
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+export async function DELETE() {
+  try {
+    await prisma.item.deleteMany({});
+    return NextResponse.json({ message: '全アイテムを削除しました' });
+  } catch (error) {
+    console.error('全件削除に失敗:', error);
+    return NextResponse.json({ error: '全件削除に失敗しました' }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
+  }
+} 

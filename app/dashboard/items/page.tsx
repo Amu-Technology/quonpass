@@ -277,12 +277,39 @@ export default function ItemsPage() {
       const formData = new FormData();
       formData.append("file", file);
 
+      console.log("CSVアップロード開始:", {
+        url: "/api/upload-items-csv",
+        fileName: file.name,
+        fileSize: file.size
+      });
+
       const response = await fetch("/api/upload-items-csv", {
         method: "POST",
         body: formData,
       });
 
-      const result = await response.json();
+      console.log("CSVアップロードレスポンス:", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
+      // レスポンスのContent-Typeを確認
+      const contentType = response.headers.get("content-type");
+      console.log("Content-Type:", contentType);
+
+      let result;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        // JSONパースエラーの場合、レスポンスのテキストを取得
+        const responseText = await response.text();
+        console.error("JSONパースエラー:", {
+          error: jsonError,
+          responseText: responseText.substring(0, 500) // 最初の500文字のみ表示
+        });
+        throw new Error(`サーバーからのレスポンスが無効です: ${response.status} ${response.statusText}`);
+      }
 
       if (response.ok) {
         // 成功メッセージを表示
@@ -396,6 +423,26 @@ export default function ItemsPage() {
             >
               新規作成
             </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!window.confirm('本当に全件削除しますか？この操作は元に戻せません。')) return;
+                try {
+                  const res = await fetch('/api/items', { method: 'DELETE' });
+                  if (res.ok) {
+                    toast({ title: '成功', description: '全アイテムを削除しました' });
+                    fetchItems();
+                  } else {
+                    throw new Error('削除に失敗しました');
+                  }
+                } catch (e) {
+                  console.error('全件削除エラー:', e);
+                  toast({ title: 'エラー', description: '全件削除に失敗しました', variant: 'destructive' });
+                }
+              }}
+            >
+              全件削除
+            </Button>
             <div className="relative">
               <input
                 type="file"
@@ -415,7 +462,12 @@ export default function ItemsPage() {
 食材,,トマト,個,10,150
 商品,,パン,袋,5,200
 資材,,包装紙,枚,,50
-特殊,,ラベル,枚,500,10`;
+特殊,,ラベル,枚,500,10
+
+# レシピ関連CSV形式（商品と材料の関連付け）
+商品番号,商品名,検品基準,誤差枚数,製造可能枚数/型,材料番号,材料,内容量
+3038,久遠テリーヌ　　ノアール（スイート）,20g,0枚,28枚,1319,QUONオリジナルコロンビアブレンド54%,450g
+3038,久遠テリーヌ　　ノアール（スイート）,20g,0枚,28枚,1028,マロンロワイヤルオレンジキューブ（2.5キロ/袋入）,150g`;
                 const blob = new Blob([csvTemplate], { type: 'text/csv' });
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -439,22 +491,45 @@ export default function ItemsPage() {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <h4 className="font-medium mb-2">CSVファイル形式</h4>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p><strong>種別:</strong> 食材、商品、資材、特殊のいずれか</p>
-                <p><strong>商品番号:</strong> 既存商品を更新する場合は番号を指定、新規作成の場合は空欄</p>
-                <p><strong>食材名:</strong> 商品の名前（必須）</p>
-                <p><strong>単位:</strong> g、kg（㎏も自動変換）、袋、本、枚、巻、個、冊、式、束、台、箱、粒、ケース、セット、バルク、ロット、缶、BT、樽、ｹｰｽ、着、なし（-は自動変換）のいずれか</p>
-                <p><strong>最低ロット:</strong> 最低発注数量（空欄可）</p>
-                <p><strong>卸価格（税抜）:</strong> 商品の卸価格（税抜）（円、小数点2桁まで対応）</p>
+              <h4 className="font-medium mb-2">サポートされているCSV形式</h4>
+              <div className="space-y-4">
+                <div>
+                  <h5 className="font-medium text-blue-600">1. アイテム管理用CSV形式</h5>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>種別:</strong> 食材、商品、資材、特殊のいずれか</p>
+                    <p><strong>商品番号:</strong> 既存商品を更新する場合は番号を指定、新規作成の場合は空欄</p>
+                    <p><strong>食材名:</strong> 商品の名前（必須）</p>
+                    <p><strong>単位:</strong> g、kg（㎏も自動変換）、袋、本、枚、巻、個、冊、式、束、台、箱、粒、ケース、セット、バルク、ロット、缶、BT、樽、ｹｰｽ、着、なし（-は自動変換）のいずれか</p>
+                    <p><strong>最低ロット:</strong> 最低発注数量（空欄可）</p>
+                    <p><strong>卸価格（税抜）:</strong> 商品の卸価格（税抜）（円、小数点2桁まで対応）</p>
+                  </div>
+                </div>
+                <div>
+                  <h5 className="font-medium text-green-600">2. レシピ関連CSV形式（商品と材料の関連付け）</h5>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>商品番号:</strong> 商品の番号（必須）</p>
+                    <p><strong>商品名:</strong> 商品の名前（必須）</p>
+                    <p><strong>検品基準:</strong> 検品基準（任意）</p>
+                    <p><strong>誤差枚数:</strong> 誤差枚数（任意）</p>
+                    <p><strong>製造可能枚数/型:</strong> 製造可能枚数（任意）</p>
+                    <p><strong>材料番号:</strong> 材料の番号（必須）</p>
+                    <p><strong>材料:</strong> 材料の名前（必須）</p>
+                    <p><strong>内容量:</strong> 内容量（任意）</p>
+                  </div>
+                </div>
               </div>
             </div>
             <div>
               <h4 className="font-medium mb-2">処理ルール</h4>
               <div className="text-sm text-gray-600 space-y-1">
+                <p><strong>アイテム管理用CSV:</strong></p>
                 <p>• 商品番号が指定されている場合：その番号で商品を更新または作成</p>
                 <p>• 商品番号が空欄の場合：食材名で既存商品を検索し、見つかれば更新、見つからなければ新規作成</p>
                 <p>• 既存商品の更新時は、指定されたデータで上書きされます</p>
+                <p><strong>レシピ関連CSV:</strong></p>
+                <p>• 商品と材料の関連付けを作成します</p>
+                <p>• 商品名と材料名でアイテムを検索し、存在しない場合は新規作成します</p>
+                <p>• ProductItemテーブルに関連付けを記録します</p>
               </div>
             </div>
           </div>
