@@ -229,7 +229,7 @@ export default function HomePage() {
             <div>
               <h4 className="font-semibold mb-4">サポート</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">ヘルプセンター</a></li>
+                <li><a href="/help" className="hover:text-white">ヘルプセンター</a></li>
                 <li><a href="#" className="hover:text-white">お問い合わせ</a></li>
               </ul>
             </div>

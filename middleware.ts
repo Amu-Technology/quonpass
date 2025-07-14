@@ -17,7 +17,8 @@ export default auth(async (req) => {
                       req.nextUrl.pathname === "/cookies" ||
                       req.nextUrl.pathname === "/erd" ||
                       req.nextUrl.pathname === "/api-docs" ||
-                      req.nextUrl.pathname === "/api/docs"
+                      req.nextUrl.pathname === "/api/docs" ||
+                      req.nextUrl.pathname === "/help"
 
   // APIルートと静的ファイルは常に許可
   if (isApiRoute || isStaticFile) {
