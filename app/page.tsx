@@ -230,13 +230,13 @@ export default function HomePage() {
               <h4 className="font-semibold mb-4">サポート</h4>
               <ul className="space-y-2 text-gray-400">
                 <li><a href="/help" className="hover:text-white">ヘルプセンター</a></li>
-                <li><a href="#" className="hover:text-white">お問い合わせ</a></li>
+                <li><a href="https://forms.gle/p2LYzcbToVBKe8H98" target="_blank" rel="noopener noreferrer" className="hover:text-white">お問い合わせ</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">会社</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="/about" className="hover:text-white">会社概要</a></li>
+                <li><a href="https://amu-lab.com" className="hover:text-white">会社概要</a></li>
                 <li><a href="/privacy" className="hover:text-white">プライバシーポリシー</a></li>
                 <li><a href="/terms" className="hover:text-white">利用規約</a></li>
                 <li><a href="/cookies" className="hover:text-white">Cookieポリシー</a></li>

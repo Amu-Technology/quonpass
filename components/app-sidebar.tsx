@@ -6,7 +6,7 @@ import * as React from "react";
 import {
   IconCookie,
   IconCompass,
-  IconDashboard,
+  IconHelp,
   IconListDetails,
   IconUsers,
   IconBuilding,
@@ -16,6 +16,9 @@ import {
   IconTruckDelivery,
   IconDatabase,
   IconChefHat,
+  IconFileText,
+  IconApi,
+  IconBug,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -31,71 +34,96 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const navMain = [
+const navGroups = [
   {
-    title: "ダッシュボード",
-    url: "/dashboard",
-    icon: IconDashboard,
-  },
-  {
-    title: "売上目標",
-    url: "/dashboard/targets",
-    icon: IconTarget,
-  },
-  {
-    title: "売上分析",
-    url: "/dashboard/analytics",
-    icon: IconChartHistogram,
-  },
-  {
-    title: "商品別実績",
-    url: "/dashboard/products-sales",
-    icon: IconListDetails,
-  },
-  {
-    title: "レジ記録一覧",
-    url: "/dashboard/register-close",
-    icon: IconCashRegister,
+    title: "予実管理",
+    items: [
+      {
+        title: "売上目標設定",
+        url: "/dashboard/targets",
+        icon: IconTarget,
+      },
+      {
+        title: "売上分析",
+        url: "/dashboard/analytics",
+        icon: IconChartHistogram,
+      },
+      {
+        title: "レジ記録登録",
+        url: "/dashboard/register-close",
+        icon: IconCashRegister,
+      },
+      {
+        title: "商品別実績",
+        url: "/dashboard/products-sales",
+        icon: IconListDetails,
+      },
+      {
+        title: "商品一覧",
+        url: "/dashboard/products",
+        icon: IconCookie,
+      },
+    ],
   },
   {
     title: "発注管理",
-    url: "/dashboard/orders",
-    icon: IconTruckDelivery,
+    items: [
+      {
+        title: "発注登録",
+        url: "/dashboard/orders",
+        icon: IconTruckDelivery,
+      },
+      {
+        title: "発注履歴",
+        url: "/dashboard/orders/history",
+        icon: IconFileText,
+      },
+      {
+        title: "発注商品一覧",
+        url: "/dashboard/items",
+        icon: IconCookie,
+      },
+      {
+        title: "レシピ管理",
+        url: "/dashboard/recipes",
+        icon: IconChefHat,
+      },
+    ],
   },
   {
-    title: "商品一覧",
-    url: "/dashboard/products",
-    icon: IconCookie,
-  },
-  {
-    title: "商品管理",
-    url: "/dashboard/items",
-    icon: IconCookie,
-  },
-  {
-    title: "レシピ管理",
-    url: "/dashboard/recipes",
-    icon: IconChefHat,
-  },
-  {
-    title: "商品・アイテム関連付け",
-    url: "/dashboard/product-items",
-    icon: IconDatabase,
-  },
-  {
-    title: "店舗管理",
-    url: "/stores",
-    icon: IconBuilding,
-  },
-  {
-    title: "ユーザー管理",
-    url: "/",
-    icon: IconUsers,
-  },
-  {
-    title: "ER図",
-    url: "/erd",
-    icon: IconDatabase,
+    title: "全般設定",
+    items: [
+      {
+        title: "店舗管理",
+        url: "/stores",
+        icon: IconBuilding,
+      },
+      {
+        title: "ユーザー管理",
+        url: "/dashboard/users",
+        icon: IconUsers,
+      },
+      {
+        title: "ER図",
+        url: "/erd",
+        icon: IconDatabase,
+      },
+      {
+        title: "Open API Docs",
+        url: "/api-docs",
+        icon: IconApi,
+      },
+      {
+        title: "ヘルプ",
+        url: "/help",
+        icon: IconHelp,
+      },
+      {
+        title: "不具合報告",
+        url: "https://forms.gle/p2LYzcbToVBKe8H98",
+        icon: IconBug,
+      },
+    ],
   },
 ];
 
@@ -129,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} />
+        <NavMain groups={navGroups} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userData} />
