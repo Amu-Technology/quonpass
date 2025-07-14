@@ -206,6 +206,8 @@ export default function TargetsPage() {
 
   // 月ごとの実績取得
   const [monthlyActuals, setMonthlyActuals] = useState<{ [key: number]: { sales: number; customers: number } }>({});
+  // 年間実績取得
+  const [yearlyActuals, setYearlyActuals] = useState<{ [key: number]: { sales: number; customers: number } }>({});
 
   // 店舗一覧を取得
   const fetchStores = useCallback(async () => {
@@ -385,6 +387,47 @@ export default function TargetsPage() {
       console.log("実績データ取得の条件を満たしていません");
     }
   }, [monthlyTargets.length, selectedStore, selectedYear]);
+
+  // 年間実績データを取得
+  const fetchYearlyActuals = useCallback(async () => {
+    if (!selectedYear) return;
+    
+    console.log("=== 年間実績取得開始 ===");
+    console.log("選択された年:", selectedYear);
+    console.log("選択された店舗:", selectedStore);
+    
+    const params = new URLSearchParams({
+      period: "year",
+      currentDate: `${selectedYear}-12-31`,
+    });
+    
+    if (selectedStore !== "all") {
+      params.append("storeId", selectedStore);
+    }
+    
+    try {
+      const response = await fetch(`/api/analytics?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("年間実績データ:", data);
+        
+        setYearlyActuals(prev => ({
+          ...prev,
+          [parseInt(selectedYear)]: {
+            sales: data.totalSales || 0,
+            customers: data.totalCustomers || 0
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("年間実績データの取得に失敗しました:", error);
+    }
+  }, [selectedYear, selectedStore]);
+
+  // 年間実績データを取得
+  useEffect(() => {
+    fetchYearlyActuals();
+  }, [fetchYearlyActuals]);
 
   // 売上分析データを取得
   const fetchSalesAnalytics = useCallback(async () => {
@@ -1004,20 +1047,47 @@ export default function TargetsPage() {
                               <div>売上点数目標: {target.target_total_items_sold.toLocaleString()}点</div>
                             )}
                             {/* 進捗率表示 */}
-                            <div className="mt-2 pt-2 border-t">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-500">進捗率</span>
-                                <Badge className={getProgressBadgeColor(85)}>
-                                  85%
-                                </Badge>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                                <div 
-                                  className="bg-blue-600 h-2 rounded-full" 
-                                  style={{ width: '85%' }}
-                                ></div>
-                              </div>
-                            </div>
+                            {(() => {
+                              const yearlyActual = yearlyActuals[target.year] || { sales: 0, customers: 0 };
+                              const salesProgress = target.target_sales_amount > 0 ? (yearlyActual.sales / target.target_sales_amount) * 100 : 0;
+                              const customerProgress = target.target_customer_count > 0 ? (yearlyActual.customers / target.target_customer_count) * 100 : 0;
+                              
+                              return (
+                                <div className="mt-2 pt-2 border-t space-y-2">
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-gray-500">売上进捗率</span>
+                                      <Badge className={getProgressBadgeColor(salesProgress)}>
+                                        {salesProgress.toFixed(1)}%
+                                      </Badge>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                      <div 
+                                        className="bg-blue-600 h-2 rounded-full" 
+                                        style={{ width: `${Math.min(salesProgress, 100)}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-gray-500">客数進捗率</span>
+                                      <Badge className={getProgressBadgeColor(customerProgress)}>
+                                        {customerProgress.toFixed(1)}%
+                                      </Badge>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                      <div 
+                                        className="bg-green-600 h-2 rounded-full" 
+                                        style={{ width: `${Math.min(customerProgress, 100)}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    実績売上: ¥{yearlyActual.sales.toLocaleString()} / 実績客数: {yearlyActual.customers.toLocaleString()}人
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
