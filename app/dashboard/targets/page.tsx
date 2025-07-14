@@ -203,6 +203,7 @@ export default function TargetsPage() {
   // 月別割り当てデータ
   const [monthlyAllocations, setMonthlyAllocations] = useState<MonthlyAllocation[]>([]);
   const [selectedAnnualTarget, setSelectedAnnualTarget] = useState<AnnualTarget | null>(null);
+  const [selectedMonthlyTarget, setSelectedMonthlyTarget] = useState<MonthlyTarget | null>(null);
 
   // 月ごとの実績取得
   const [monthlyActuals, setMonthlyActuals] = useState<{ [key: number]: { sales: number; customers: number } }>({});
@@ -720,6 +721,98 @@ export default function TargetsPage() {
     }
   };
 
+  // 月間目標更新
+  const updateMonthlyTarget = async () => {
+    if (!selectedMonthlyTarget) return;
+    
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`/api/targets/monthly/${selectedMonthlyTarget.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(monthlyFormData),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "成功",
+          description: "月間目標が正常に更新されました",
+        });
+        setSelectedMonthlyTarget(null);
+        setMonthlyFormData({
+          annual_target_id: 0,
+          month: 1,
+          allocation_percentage: 0.1,
+          target_sales_amount: 0,
+          target_customer_count: 0,
+          target_total_items_sold: undefined,
+        });
+        fetchMonthlyTargets();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "月間目標の更新に失敗しました");
+      }
+    } catch (error) {
+      console.error("月間目標の更新に失敗しました:", error);
+      toast({
+        title: "エラー",
+        description:
+          error instanceof Error ? error.message : "月間目標の更新に失敗しました",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 月間目標削除
+  const deleteMonthlyTarget = async (targetId: number) => {
+    if (!confirm("この月間目標を削除しますか？")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/targets/monthly/${targetId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast({
+          title: "成功",
+          description: "月間目標が正常に削除されました",
+        });
+        fetchMonthlyTargets();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "月間目標の削除に失敗しました");
+      }
+    } catch (error) {
+      console.error("月間目標の削除に失敗しました:", error);
+      toast({
+        title: "エラー",
+        description:
+          error instanceof Error ? error.message : "月間目標の削除に失敗しました",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 月間目標編集ダイアログを開く
+  const openEditMonthlyDialog = (target: MonthlyTarget) => {
+    setSelectedMonthlyTarget(target);
+    setMonthlyFormData({
+      annual_target_id: target.annual_target_id,
+      month: target.month,
+      allocation_percentage: target.allocation_percentage,
+      target_sales_amount: target.target_sales_amount,
+      target_customer_count: target.target_customer_count,
+      target_total_items_sold: target.target_total_items_sold,
+    });
+  };
+
   // 年間目標作成
   const createAnnualTarget = async () => {
     setIsSubmitting(true);
@@ -761,6 +854,97 @@ export default function TargetsPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // 年間目標更新
+  const updateAnnualTarget = async () => {
+    if (!selectedAnnualTarget) return;
+    
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`/api/targets/${selectedAnnualTarget.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(annualFormData),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "成功",
+          description: "年間目標が正常に更新されました",
+        });
+        setSelectedAnnualTarget(null);
+        setAnnualFormData({
+          year: new Date().getFullYear(),
+          store_id: 0,
+          target_sales_amount: 0,
+          target_customer_count: 0,
+          target_total_items_sold: undefined,
+        });
+        fetchAnnualTargets();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "年間目標の更新に失敗しました");
+      }
+    } catch (error) {
+      console.error("年間目標の更新に失敗しました:", error);
+      toast({
+        title: "エラー",
+        description:
+          error instanceof Error ? error.message : "年間目標の更新に失敗しました",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 年間目標削除
+  const deleteAnnualTarget = async (targetId: number) => {
+    if (!confirm("この年間目標を削除しますか？関連する月間目標も削除されます。")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/targets/${targetId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast({
+          title: "成功",
+          description: "年間目標が正常に削除されました",
+        });
+        fetchAnnualTargets();
+        fetchMonthlyTargets();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "年間目標の削除に失敗しました");
+      }
+    } catch (error) {
+      console.error("年間目標の削除に失敗しました:", error);
+      toast({
+        title: "エラー",
+        description:
+          error instanceof Error ? error.message : "年間目標の削除に失敗しました",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 年間目標編集ダイアログを開く
+  const openEditAnnualDialog = (target: AnnualTarget) => {
+    setSelectedAnnualTarget(target);
+    setAnnualFormData({
+      year: target.year,
+      store_id: target.store_id,
+      target_sales_amount: target.target_sales_amount,
+      target_customer_count: target.target_customer_count,
+      target_total_items_sold: target.target_total_items_sold,
+    });
   };
 
 
@@ -1091,8 +1275,26 @@ export default function TargetsPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        作成日: {new Date(target.created_at).toLocaleDateString('ja-JP')}
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                          作成日: {new Date(target.created_at).toLocaleDateString('ja-JP')}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditAnnualDialog(target)}
+                          >
+                            編集
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteAnnualTarget(target.id)}
+                          >
+                            削除
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1225,8 +1427,26 @@ export default function TargetsPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          作成日: {new Date(target.created_at).toLocaleDateString('ja-JP')}
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-gray-500">
+                            作成日: {new Date(target.created_at).toLocaleDateString('ja-JP')}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditMonthlyDialog(target)}
+                            >
+                              編集
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteMonthlyTarget(target.id)}
+                            >
+                              削除
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1242,7 +1462,7 @@ export default function TargetsPage() {
             {/* 年間目標作成 */}
             <Card>
               <CardHeader>
-                <CardTitle>年間目標作成</CardTitle>
+                <CardTitle>{selectedAnnualTarget ? "年間目標編集" : "年間目標作成"}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -1396,12 +1616,30 @@ export default function TargetsPage() {
                   </div>
 
                   <Button
-                    onClick={createAnnualTarget}
+                    onClick={selectedAnnualTarget ? updateAnnualTarget : createAnnualTarget}
                     disabled={isSubmitting || !annualFormData.store_id || annualFormData.target_sales_amount <= 0}
                     className="w-full"
                   >
-                    {isSubmitting ? "作成中..." : "年間目標を作成"}
+                    {isSubmitting ? "処理中..." : selectedAnnualTarget ? "年間目標を更新" : "年間目標を作成"}
                   </Button>
+                  {selectedAnnualTarget && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedAnnualTarget(null);
+                        setAnnualFormData({
+                          year: new Date().getFullYear(),
+                          store_id: 0,
+                          target_sales_amount: 0,
+                          target_customer_count: 0,
+                          target_total_items_sold: undefined,
+                        });
+                      }}
+                      className="w-full"
+                    >
+                      キャンセル
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1409,7 +1647,7 @@ export default function TargetsPage() {
             {/* 月間目標作成 */}
             <Card>
               <CardHeader>
-                <CardTitle>月間目標作成</CardTitle>
+                <CardTitle>{selectedMonthlyTarget ? "月間目標編集" : "月間目標作成"}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -1418,6 +1656,7 @@ export default function TargetsPage() {
                     <Select
                       value={monthlyFormData.annual_target_id.toString()}
                       onValueChange={(value) => handleAnnualTargetChange(parseInt(value))}
+                      disabled={!!selectedMonthlyTarget}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="年間目標を選択" />
@@ -1431,6 +1670,100 @@ export default function TargetsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {selectedMonthlyTarget && (
+                    <div>
+                      <Label htmlFor="month">月</Label>
+                      <Select
+                        value={monthlyFormData.month.toString()}
+                        onValueChange={(value) =>
+                          setMonthlyFormData((prev) => ({ ...prev, month: parseInt(value) }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                            <SelectItem key={month} value={month.toString()}>
+                              {getMonthLabel(month)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedMonthlyTarget && (
+                    <div>
+                      <Label htmlFor="allocation_percentage">割合</Label>
+                      <Input
+                        id="allocation_percentage"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="1"
+                        value={monthlyFormData.allocation_percentage}
+                        onChange={(e) =>
+                          setMonthlyFormData((prev) => ({
+                            ...prev,
+                            allocation_percentage: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        placeholder="割合を入力（0.0-1.0）"
+                      />
+                    </div>
+                  )}
+
+                  {selectedMonthlyTarget && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="target_sales_amount">売上目標</Label>
+                        <Input
+                          id="target_sales_amount"
+                          type="number"
+                          value={monthlyFormData.target_sales_amount}
+                          onChange={(e) =>
+                            setMonthlyFormData((prev) => ({
+                              ...prev,
+                              target_sales_amount: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                          placeholder="売上目標を入力"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="target_customer_count">客数目標</Label>
+                        <Input
+                          id="target_customer_count"
+                          type="number"
+                          value={monthlyFormData.target_customer_count}
+                          onChange={(e) =>
+                            setMonthlyFormData((prev) => ({
+                              ...prev,
+                              target_customer_count: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                          placeholder="客数目標を入力"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="target_total_items_sold">売上点数目標（任意）</Label>
+                        <Input
+                          id="target_total_items_sold"
+                          type="number"
+                          value={monthlyFormData.target_total_items_sold || ''}
+                          onChange={(e) =>
+                            setMonthlyFormData((prev) => ({
+                              ...prev,
+                              target_total_items_sold: e.target.value ? parseInt(e.target.value) : undefined,
+                            }))
+                          }
+                          placeholder="売上点数目標を入力（任意）"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {selectedAnnualTarget && (
                     <>
@@ -1544,16 +1877,35 @@ export default function TargetsPage() {
                       </div>
 
                       <Button
-                        onClick={createAllMonthlyTargets}
+                        onClick={selectedMonthlyTarget ? updateMonthlyTarget : createAllMonthlyTargets}
                         disabled={
                           isSubmitting || 
-                          monthlyAllocations.length === 0 ||
-                          Math.abs(monthlyAllocations.reduce((sum, a) => sum + a.allocation_percentage, 0) - 1) > 0.01
+                          (selectedMonthlyTarget ? false : monthlyAllocations.length === 0) ||
+                          (selectedMonthlyTarget ? false : Math.abs(monthlyAllocations.reduce((sum, a) => sum + a.allocation_percentage, 0) - 1) > 0.01)
                         }
                         className="w-full"
                       >
-                        {isSubmitting ? "作成中..." : "12ヶ月分の月間目標を作成"}
+                        {isSubmitting ? "処理中..." : selectedMonthlyTarget ? "月間目標を更新" : "12ヶ月分の月間目標を作成"}
                       </Button>
+                      {selectedMonthlyTarget && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedMonthlyTarget(null);
+                            setMonthlyFormData({
+                              annual_target_id: 0,
+                              month: 1,
+                              allocation_percentage: 0.1,
+                              target_sales_amount: 0,
+                              target_customer_count: 0,
+                              target_total_items_sold: undefined,
+                            });
+                          }}
+                          className="w-full"
+                        >
+                          キャンセル
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>
